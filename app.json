@@ -45,9 +45,11 @@
       "typedRoutes": true
     },
     "extra": {
+      "router": {},
       "eas": {
-        "projectId": "twin-city-updates"
+        "projectId": "cb66a19d-1b22-42b0-ad81-f85326947dfe"
       }
-    }
+    },
+    "owner": "umer2k200"
   }
 }
