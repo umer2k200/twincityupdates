@@ -23,7 +23,8 @@
       "permissions": [
         "INTERNET",
         "ACCESS_NETWORK_STATE"
-      ]
+      ],
+      "googleServicesFile": "./google-services.json"
     },
     "ios": {
       "supportsTablet": true,
@@ -39,7 +40,8 @@
       "expo-font",
       "expo-web-browser",
       "expo-dev-client",
-      "expo-build-properties"
+      "expo-build-properties",
+      "@react-native-google-signin/google-signin"
     ],
     "experiments": {
       "typedRoutes": true

@@ -7,7 +7,8 @@ import {
   Switch,
   StatusBar,
   ScrollView,
-  Alert
+  Alert,
+  ActivityIndicator
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -20,25 +21,54 @@ import {
   User,
   Shield,
   Database,
-  Trash2
+  Trash2,
+  LogOut,
+  Globe
 } from 'lucide-react-native';
 import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
+import { useLanguage } from '../../contexts/LanguageContext';
 import { storageService } from '../../services/storageService';
+import { router } from 'expo-router';
 
 export default function SettingsScreen() {
   const { state, updatePreferences, clearCache } = useApp();
+  const { user, userProfile, signOut, loading: authLoading } = useAuth();
+  const { language, setLanguage, t } = useLanguage();
   const [cacheSize, setCacheSize] = useState('0 KB');
   
   const isDarkMode = state.preferences.darkMode;
-  
-  useEffect(() => {
-    loadCacheSize();
-  }, []);
   
   const loadCacheSize = async () => {
     const size = await storageService.getCacheSize();
     setCacheSize(size);
   };
+  
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.replace('/auth/login');
+      return;
+    }
+    
+    if (user) {
+      loadCacheSize();
+    }
+  }, [user, authLoading]);
+  
+  // Show loading screen while checking authentication
+  if (authLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color="#2563eb" />
+        <Text style={styles.loadingText}>Loading...</Text>
+      </View>
+    );
+  }
+  
+  // Redirect if not authenticated
+  if (!user) {
+    return null;
+  }
   
   const handlePreferenceChange = async (key: keyof typeof state.preferences, value: any) => {
     const newPreferences = {
@@ -62,6 +92,48 @@ export default function SettingsScreen() {
             await loadCacheSize();
             Alert.alert('Success', 'Cache cleared successfully');
           }
+        },
+      ]
+    );
+  };
+
+  const handleSignOut = () => {
+    Alert.alert(
+      'Sign Out',
+      'Are you sure you want to sign out?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Sign Out', 
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await signOut();
+            } catch (error) {
+              Alert.alert('Error', 'Failed to sign out. Please try again.');
+            }
+          }
+        },
+      ]
+    );
+  };
+
+  const handleLanguageChange = () => {
+    Alert.alert(
+      t('settings.language'),
+      'Choose your preferred language',
+      [
+        { 
+          text: t('common.cancel'), 
+          style: 'cancel' 
+        },
+        { 
+          text: t('settings.language.english'), 
+          onPress: () => setLanguage('en')
+        },
+        { 
+          text: t('settings.language.urdu'), 
+          onPress: () => setLanguage('ur')
         },
       ]
     );
@@ -153,8 +225,15 @@ export default function SettingsScreen() {
         <SectionHeader title="Appearance" />
         <View style={[styles.section, isDarkMode && styles.sectionDark]}>
           <SettingItem
+            icon={<Globe size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
+            title={t('settings.language')}
+            subtitle={language === 'en' ? t('settings.language.english') : t('settings.language.urdu')}
+            hasChevron
+            onPress={handleLanguageChange}
+          />
+          <SettingItem
             icon={<Moon size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
-            title="Dark Mode"
+            title={t('settings.darkMode')}
             subtitle="Switch between light and dark themes"
             hasSwitch
             switchValue={state.preferences.darkMode}
@@ -209,7 +288,7 @@ export default function SettingsScreen() {
           <SettingItem
             icon={<User size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
             title="Profile"
-            subtitle="Manage your account settings"
+            subtitle={userProfile?.displayName || user?.email || "Manage your account settings"}
             hasChevron
             onPress={() => {
               console.log('Profile pressed');
@@ -223,6 +302,13 @@ export default function SettingsScreen() {
             onPress={() => {
               console.log('Privacy pressed');
             }}
+          />
+          <SettingItem
+            icon={<LogOut size={20} color="#ef4444" />}
+            title="Sign Out"
+            subtitle="Sign out of your account"
+            hasChevron
+            onPress={handleSignOut}
           />
         </View>
 
@@ -386,5 +472,14 @@ const styles = StyleSheet.create({
   },
   footerSubtextDark: {
     color: '#9ca3af',
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    color: '#6b7280',
   },
 });

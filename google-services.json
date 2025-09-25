@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "126914622699",
+    "project_id": "twin-city-updates",
+    "storage_bucket": "twin-city-updates.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:126914622699:android:309b6c74033cf90bc9faae",
+        "android_client_info": {
+          "package_name": "com.twincityupdates.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "126914622699-nuqctqlg3bude3avvroeoabdglt8ati9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBvC5tUsWmlzalaO3YvOwl3nuUZy-wSh50"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "126914622699-nuqctqlg3bude3avvroeoabdglt8ati9.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

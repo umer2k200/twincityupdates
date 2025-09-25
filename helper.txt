@@ -1,0 +1,4 @@
+for building: eas build --platform android --profile preview
+for testing: eas build --platform android --profile development
+for production: eas build --platform android --profile production
+for both: eas build --platform all --profile preview

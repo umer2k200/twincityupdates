@@ -12,6 +12,16 @@ export interface SocialUpdate {
   author?: string;
   likes?: number;
   shares?: number;
+  category?: string;
+  hasLocation?: boolean;
+  location?: {
+    name: string;
+    address: string;
+    coordinates: {
+      latitude: number;
+      longitude: number;
+    };
+  };
 }
 
 // Mock API responses for testing
@@ -48,6 +58,16 @@ const mockUpdates: SocialUpdate[] = [
     timestamp: '2024-01-15T06:45:00Z',
     hasMedia: false,
     author: 'Emergency Services',
+    category: 'emergency',
+    hasLocation: true,
+    location: {
+      name: 'Twin City Area',
+      address: 'Twin City, State',
+      coordinates: {
+        latitude: 40.7128,
+        longitude: -74.0060
+      }
+    }
   },
   {
     id: '4',
@@ -83,6 +103,77 @@ const mockUpdates: SocialUpdate[] = [
     timestamp: '2024-01-14T12:30:00Z',
     hasMedia: false,
     author: 'Public Works',
+    category: 'maintenance',
+    hasLocation: true,
+    location: {
+      name: 'Oak Street',
+      address: 'Oak Street, Twin City',
+      coordinates: {
+        latitude: 40.7589,
+        longitude: -73.9851
+      }
+    }
+  },
+  {
+    id: '7',
+    source: 'twitter',
+    title: 'Road Closure Alert - Main Street',
+    content: 'Main Street between 1st and 3rd Avenue will be closed for emergency repairs starting tomorrow at 6 AM. Expected duration: 2-3 days. Use alternate routes via Elm Street.',
+    timestamp: '2024-01-14T09:45:00Z',
+    hasMedia: false,
+    author: '@TwinCityTraffic',
+    category: 'traffic',
+    hasLocation: true,
+    location: {
+      name: 'Main Street (1st - 3rd Ave)',
+      address: 'Main Street, Twin City',
+      coordinates: {
+        latitude: 40.7505,
+        longitude: -73.9934
+      }
+    },
+    likes: 34,
+    shares: 18,
+  },
+  {
+    id: '8',
+    source: 'facebook',
+    title: 'Traffic Accident on Highway 101',
+    content: 'Multi-vehicle accident reported on Highway 101 South near exit 15. Traffic is backed up for 2 miles. Emergency services on scene. Avoid the area if possible.',
+    timestamp: '2024-01-14T08:20:00Z',
+    hasMedia: false,
+    author: 'Twin City Police Department',
+    category: 'emergency',
+    hasLocation: true,
+    location: {
+      name: 'Highway 101 South - Exit 15',
+      address: 'Highway 101, Twin City',
+      coordinates: {
+        latitude: 40.7282,
+        longitude: -74.0776
+      }
+    },
+    likes: 67,
+    shares: 42,
+  },
+  {
+    id: '9',
+    source: 'whatsapp',
+    title: 'Power Outage in Downtown Area',
+    content: 'Power outage affecting downtown area due to equipment failure. Crews are working to restore power. Estimated restoration time: 2-3 hours. Emergency shelter available at City Hall.',
+    timestamp: '2024-01-13T19:30:00Z',
+    hasMedia: false,
+    author: 'Twin City Power Company',
+    category: 'emergency',
+    hasLocation: true,
+    location: {
+      name: 'Downtown Area',
+      address: 'Downtown Twin City',
+      coordinates: {
+        latitude: 40.7614,
+        longitude: -73.9776
+      }
+    },
   },
 ];
 

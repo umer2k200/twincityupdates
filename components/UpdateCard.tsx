@@ -5,20 +5,53 @@ import {
   StyleSheet, 
   TouchableOpacity, 
   Image,
-  Dimensions 
+  Dimensions,
+  Share,
+  Alert
 } from 'react-native';
-import { Twitter, Facebook, MessageCircle, Heart, Share2, ExternalLink } from 'lucide-react-native';
+import { Twitter, Facebook, MessageCircle, Heart, Share2, ExternalLink, Bookmark, BookmarkCheck, MapPin } from 'lucide-react-native';
 import { SocialUpdate } from '../services/apiService';
 
 interface UpdateCardProps {
   update: SocialUpdate;
   isDarkMode?: boolean;
   onPress?: () => void;
+  onSave?: () => void;
+  isSaved?: boolean;
+  showSaveButton?: boolean;
 }
 
 const { width } = Dimensions.get('window');
 
-export function UpdateCard({ update, isDarkMode = false, onPress }: UpdateCardProps) {
+export function UpdateCard({ 
+  update, 
+  isDarkMode = false, 
+  onPress, 
+  onSave, 
+  isSaved = false, 
+  showSaveButton = false 
+}: UpdateCardProps) {
+  
+  const handleShare = async () => {
+    try {
+      const shareContent = {
+        title: update.title || 'Twin City Updates',
+        message: `${update.title}\n\n${update.content}\n\nSource: ${getSourceName(update.source)}\nTime: ${formatTimestamp(update.timestamp)}\n\nShared from Twin City Updates app`,
+        url: update.mediaUrl || 'https://twincityupdates.com'
+      };
+
+      const result = await Share.share(shareContent);
+      
+      if (result.action === Share.sharedAction) {
+        console.log('Content shared successfully');
+      } else if (result.action === Share.dismissedAction) {
+        console.log('Share dismissed');
+      }
+    } catch (error) {
+      console.error('Error sharing content:', error);
+      Alert.alert('Error', 'Failed to share content. Please try again.');
+    }
+  };
   const getSourceIcon = (source: string) => {
     const iconProps = { size: 18, color: isDarkMode ? '#e5e7eb' : '#374151' };
     
@@ -80,9 +113,16 @@ export function UpdateCard({ update, isDarkMode = false, onPress }: UpdateCardPr
         <View style={styles.sourceInfo}>
           {getSourceIcon(update.source)}
           <View style={styles.sourceText}>
-            <Text style={[styles.sourceName, isDarkMode && styles.textDark]}>
-              {getSourceName(update.source)}
-            </Text>
+            <View style={styles.sourceNameRow}>
+              <Text style={[styles.sourceName, isDarkMode && styles.textDark]}>
+                {getSourceName(update.source)}
+              </Text>
+              {update.hasLocation && (
+                <View style={styles.locationIndicator}>
+                  <MapPin size={12} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+                </View>
+              )}
+            </View>
             {update.author && (
               <Text style={[styles.author, isDarkMode && styles.authorDark]}>
                 {update.author}
@@ -90,9 +130,37 @@ export function UpdateCard({ update, isDarkMode = false, onPress }: UpdateCardPr
             )}
           </View>
         </View>
-        <Text style={[styles.timestamp, isDarkMode && styles.timestampDark]}>
-          {formatTimestamp(update.timestamp)}
-        </Text>
+        <View style={styles.headerRight}>
+          <Text style={[styles.timestamp, isDarkMode && styles.timestampDark]}>
+            {formatTimestamp(update.timestamp)}
+          </Text>
+          <View style={styles.actionButtons}>
+            <TouchableOpacity
+              style={styles.shareButton}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleShare();
+              }}
+            >
+              <Share2 size={18} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
+            </TouchableOpacity>
+            {showSaveButton && onSave && (
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  onSave();
+                }}
+              >
+                {isSaved ? (
+                  <BookmarkCheck size={18} color="#2563eb" />
+                ) : (
+                  <Bookmark size={18} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
+                )}
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
       </View>
 
       {/* Content */}
@@ -172,6 +240,22 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 12,
   },
+  headerRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  shareButton: {
+    padding: 4,
+  },
+  saveButton: {
+    padding: 4,
+  },
   sourceInfo: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -181,10 +265,18 @@ const styles = StyleSheet.create({
     marginLeft: 8,
     flex: 1,
   },
+  sourceNameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
   sourceName: {
     fontSize: 14,
     fontWeight: '600',
     color: '#374151',
+  },
+  locationIndicator: {
+    padding: 2,
   },
   author: {
     fontSize: 12,
