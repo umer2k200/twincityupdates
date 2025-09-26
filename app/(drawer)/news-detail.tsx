@@ -10,6 +10,7 @@ import {
   Linking,
   Alert,
   Dimensions,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2, ExternalLink, Clock, MapPin, User, Navigation } from 'lucide-react-native';
@@ -17,12 +18,15 @@ import { ArrowLeft, Share2, ExternalLink, Clock, MapPin, User, Navigation } from
 let MapView: any = null;
 let Marker: any = null;
 
-try {
-  const maps = require('react-native-maps');
-  MapView = maps.MapView;
-  Marker = maps.Marker;
-} catch (error) {
-  console.log('Maps not available:', error instanceof Error ? error.message : 'Unknown error');
+// Only import maps on native platforms
+if (Platform.OS !== 'web') {
+  try {
+    const maps = require('react-native-maps');
+    MapView = maps.MapView;
+    Marker = maps.Marker;
+  } catch (error) {
+    console.log('Maps not available:', error instanceof Error ? error.message : 'Unknown error');
+  }
 }
 import * as Location from 'expo-location';
 import { useApp } from '../../contexts/AppContext';
