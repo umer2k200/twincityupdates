@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 import { Twitter, Facebook, MessageCircle, Heart, Share2, ExternalLink, Bookmark, BookmarkCheck, MapPin } from 'lucide-react-native';
 import { SocialUpdate } from '../services/apiService';
+import { getThemeColors } from '../constants/colors';
 
 interface UpdateCardProps {
   update: SocialUpdate;
@@ -31,6 +32,7 @@ export function UpdateCard({
   isSaved = false, 
   showSaveButton = false 
 }: UpdateCardProps) {
+  const colors = getThemeColors(isDarkMode);
   
   const handleShare = async () => {
     try {
@@ -53,7 +55,7 @@ export function UpdateCard({
     }
   };
   const getSourceIcon = (source: string) => {
-    const iconProps = { size: 18, color: isDarkMode ? '#e5e7eb' : '#374151' };
+    const iconProps = { size: 18, color: colors.text.primary };
     
     switch (source) {
       case 'twitter':
@@ -119,7 +121,7 @@ export function UpdateCard({
               </Text>
               {update.hasLocation && (
                 <View style={styles.locationIndicator}>
-                  <MapPin size={12} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+                  <MapPin size={12} color={colors.primary} />
                 </View>
               )}
             </View>
@@ -153,7 +155,7 @@ export function UpdateCard({
                 }}
               >
                 {isSaved ? (
-                  <BookmarkCheck size={18} color="#2563eb" />
+                  <BookmarkCheck size={18} color={colors.primary} />
                 ) : (
                   <Bookmark size={18} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
                 )}

@@ -11,14 +11,16 @@
     "splash": {
       "image": "./assets/images/icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#8b5cf6"
     },
     "android": {
       "package": "com.twincityupdates.app",
       "versionCode": 1,
+      "icon": "./assets/images/icon.png",
       "adaptiveIcon": {
-        "foregroundImage": "./assets/images/icon.png",
-        "backgroundColor": "#ffffff"
+        "foregroundImage": "./assets/images/icon-foreground.png",
+        "backgroundImage": "./assets/images/icon-background.png",
+        "backgroundColor": "#8b5cf6"
       },
       "permissions": [
         "INTERNET",

@@ -30,6 +30,7 @@ import {
 import { useApp } from '../../contexts/AppContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { weatherService, WeatherData, ForecastData, WeatherAlerts } from '../../services/weatherService';
+import { getThemeColors } from '../../constants/colors';
 
 const { width } = Dimensions.get('window');
 
@@ -37,6 +38,7 @@ export default function WeatherScreen() {
   const { state } = useApp();
   const { t } = useLanguage();
   const isDarkMode = state.preferences.darkMode;
+  const colors = getThemeColors(isDarkMode);
   
   const [currentWeather, setCurrentWeather] = useState<WeatherData[]>([]);
   const [forecast, setForecast] = useState<ForecastData[]>([]);
@@ -106,7 +108,7 @@ export default function WeatherScreen() {
       <View key={weather.id} style={[styles.currentWeatherCard, isDarkMode && styles.currentWeatherCardDark]}>
         <View style={styles.weatherHeader}>
           <View style={styles.locationInfo}>
-            <MapPin size={20} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+            <MapPin size={20} color={colors.primary} />
             <Text style={[styles.cityName, isDarkMode && styles.cityNameDark]}>
               {weather.city}
             </Text>
@@ -142,7 +144,7 @@ export default function WeatherScreen() {
         <View style={styles.weatherDetails}>
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
-              <Droplets size={20} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+              <Droplets size={20} color={colors.primary} />
               <Text style={[styles.detailLabel, isDarkMode && styles.detailLabelDark]}>
                 Humidity
               </Text>
@@ -152,7 +154,7 @@ export default function WeatherScreen() {
             </View>
             
             <View style={styles.detailItem}>
-              <Wind size={20} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+              <Wind size={20} color={colors.primary} />
               <Text style={[styles.detailLabel, isDarkMode && styles.detailLabelDark]}>
                 Wind
               </Text>
@@ -164,7 +166,7 @@ export default function WeatherScreen() {
 
           <View style={styles.detailRow}>
             <View style={styles.detailItem}>
-              <Eye size={20} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+              <Eye size={20} color={colors.primary} />
               <Text style={[styles.detailLabel, isDarkMode && styles.detailLabelDark]}>
                 Visibility
               </Text>
@@ -174,7 +176,7 @@ export default function WeatherScreen() {
             </View>
             
             <View style={styles.detailItem}>
-              <Gauge size={20} color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+              <Gauge size={20} color={colors.primary} />
               <Text style={[styles.detailLabel, isDarkMode && styles.detailLabelDark]}>
                 Pressure
               </Text>

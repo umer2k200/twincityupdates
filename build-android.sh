@@ -20,6 +20,25 @@ EOF
     exit 1
 fi
 
+# Check for required icon files
+echo "🎨 Checking icon files..."
+if [ ! -f "assets/images/icon.png" ]; then
+    echo "❌ Missing assets/images/icon.png!"
+    echo "💡 Run: node generate-icons.js for guidance"
+    exit 1
+fi
+
+if [ ! -f "assets/images/icon-foreground.png" ]; then
+    echo "⚠️  Missing assets/images/icon-foreground.png - using main icon"
+    cp assets/images/icon.png assets/images/icon-foreground.png
+fi
+
+if [ ! -f "assets/images/icon-background.png" ]; then
+    echo "⚠️  Missing assets/images/icon-background.png - creating solid background"
+    # This would need imagemagick or similar tool to create a solid color image
+    echo "💡 Please create assets/images/icon-background.png (1024x1024px solid color)"
+fi
+
 # Build web version first
 echo "📦 Building web version..."
 npm run build:web

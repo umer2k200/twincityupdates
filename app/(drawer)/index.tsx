@@ -31,6 +31,7 @@ import { SearchBar } from '../../components/SearchBar';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { alertService, Alert } from '../../services/alertService';
+import { getThemeColors } from '../../constants/colors';
 
 const SAVED_NEWS_KEY = 'saved_news';
 
@@ -53,6 +54,7 @@ export default function HomeScreen() {
   const [alertsLoading, setAlertsLoading] = useState(true);
   
   const isDarkMode = state.preferences.darkMode;
+  const colors = getThemeColors(isDarkMode);
   
   // Category options
   const categories = [
@@ -143,7 +145,7 @@ export default function HomeScreen() {
   if (authLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>Loading...</Text>
       </View>
     );
@@ -211,7 +213,7 @@ export default function HomeScreen() {
     if (alertsLoading) {
       return (
         <View style={[styles.alertBanner, isDarkMode && styles.alertBannerDark]}>
-          <ActivityIndicator size="small" color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+          <ActivityIndicator size="small" color={colors.primary} />
           <Text style={[styles.alertLoadingText, isDarkMode && styles.alertLoadingTextDark]}>
             Loading alerts...
           </Text>
@@ -429,7 +431,7 @@ export default function HomeScreen() {
     if (state.loading) {
       return (
         <View style={styles.loadingFooter}>
-          <ActivityIndicator size="small" color={isDarkMode ? '#60a5fa' : '#2563eb'} />
+          <ActivityIndicator size="small" color={colors.primary} />
           <Text style={[styles.loadingFooterText, isDarkMode && styles.loadingTextDark]}>
             Loading updates...
           </Text>
@@ -471,8 +473,8 @@ export default function HomeScreen() {
           <RefreshControl
             refreshing={state.refreshing}
             onRefresh={handleRefresh}
-            tintColor={isDarkMode ? '#60a5fa' : '#2563eb'}
-            colors={[isDarkMode ? '#60a5fa' : '#2563eb']}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         contentContainerStyle={styles.listContent}
