@@ -89,10 +89,24 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const signOut = async () => {
     try {
       setLoading(true);
-      await authService.signOut();
+      
+      // Clear user profile and user first
       setUserProfile(null);
-    } catch (error) {
+      setUser(null);
+      
+      // Then sign out from Firebase
+      await authService.signOut();
+      
+      // Ensure loading is set to false after successful sign out
       setLoading(false);
+    } catch (error) {
+      console.error('Sign out error in AuthContext:', error);
+      
+      // Even if Firebase sign out fails, clear local state
+      setUser(null);
+      setUserProfile(null);
+      setLoading(false);
+      
       throw error;
     }
   };

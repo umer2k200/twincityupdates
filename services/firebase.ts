@@ -19,14 +19,16 @@ const app = initializeApp(firebaseConfig);
 // Initialize Auth with conditional persistence
 let auth;
 try {
-  // Try to use React Native persistence if available
+  // Try to use React Native persistence if available (for production builds)
   const { getReactNativePersistence } = require('firebase/auth');
+  console.log('Initializing Firebase Auth with AsyncStorage persistence...');
   auth = initializeAuth(app, {
     persistence: getReactNativePersistence(AsyncStorage)
   });
+  console.log('Firebase Auth initialized with persistence');
 } catch (error) {
   // Fallback to standard auth for web/development
-  console.log('Using standard Firebase Auth (no persistence in development)');
+  console.log('Using standard Firebase Auth (development mode)');
   auth = getAuth(app);
 }
 

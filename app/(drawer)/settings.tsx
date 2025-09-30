@@ -23,21 +23,27 @@ import {
   Database,
   Trash2,
   LogOut,
-  Globe
+  Globe,
+  Lock
 } from 'lucide-react-native';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { useLanguage } from '../../contexts/LanguageContext';
 import { storageService } from '../../services/storageService';
 import { router } from 'expo-router';
+import { getThemeColors } from '../../constants/colors';
+import { ThemedAlert } from '../../components/ThemedAlert';
+import { useThemedAlert } from '../../hooks/useThemedAlert';
 
 export default function SettingsScreen() {
   const { state, updatePreferences, clearCache } = useApp();
-  const { user, userProfile, signOut, loading: authLoading } = useAuth();
+  const { user, userProfile, signOut, updateUserProfile, loading: authLoading } = useAuth();
   const { language, setLanguage, t } = useLanguage();
   const [cacheSize, setCacheSize] = useState('0 KB');
   
   const isDarkMode = state.preferences.darkMode;
+  const colors = getThemeColors(isDarkMode);
+  const { alertConfig, isVisible, showAlert, hideAlert } = useThemedAlert();
   
   const loadCacheSize = async () => {
     const size = await storageService.getCacheSize();
@@ -59,8 +65,8 @@ export default function SettingsScreen() {
   if (authLoading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading...</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, isDarkMode && styles.loadingTextDark]}>Loading...</Text>
       </View>
     );
   }
@@ -79,10 +85,11 @@ export default function SettingsScreen() {
   };
   
   const handleClearCache = () => {
-    Alert.alert(
-      'Clear Cache',
-      'This will remove all cached updates. You may need to refresh to see new content.',
-      [
+    showAlert({
+      title: 'Clear Cache',
+      message: 'This will remove all cached updates. You may need to refresh to see new content.',
+      type: 'warning',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Clear', 
@@ -90,53 +97,97 @@ export default function SettingsScreen() {
           onPress: async () => {
             await clearCache();
             await loadCacheSize();
-            Alert.alert('Success', 'Cache cleared successfully');
+            showAlert({
+              title: 'Success',
+              message: 'Cache cleared successfully',
+              type: 'success',
+              buttons: [{ text: 'OK', style: 'default' }]
+            });
           }
         },
       ]
-    );
+    });
   };
 
   const handleSignOut = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
+    showAlert({
+      title: 'Sign Out',
+      message: 'Are you sure you want to sign out from Twin City Updates?',
+      type: 'warning',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Sign Out', 
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('Settings: Starting sign out...');
+              
+              // Sign out from auth service
               await signOut();
+              
+              console.log('Settings: Sign out successful, navigating to login...');
+              
+              // Navigate to login screen
+              router.replace('/auth/login');
+              
             } catch (error) {
-              Alert.alert('Error', 'Failed to sign out. Please try again.');
+              console.error('Settings: Error signing out:', error);
+              showAlert({
+                title: 'Error',
+                message: 'Failed to sign out. Please try again.',
+                type: 'error',
+                buttons: [{ text: 'OK', style: 'default' }]
+              });
+              
+              // Even if there's an error, try to navigate to login
+              try {
+                router.replace('/auth/login');
+              } catch (navError) {
+                console.error('Settings: Navigation error:', navError);
+              }
             }
           }
         },
       ]
-    );
+    });
   };
 
   const handleLanguageChange = () => {
-    Alert.alert(
-      t('settings.language'),
-      'Choose your preferred language',
-      [
-        { 
-          text: t('common.cancel'), 
-          style: 'cancel' 
-        },
+    showAlert({
+      title: t('settings.language'),
+      message: 'Choose your preferred language for the app',
+      type: 'info',
+      buttons: [
+        { text: t('common.cancel'), style: 'cancel' },
         { 
           text: t('settings.language.english'), 
-          onPress: () => setLanguage('en')
+          style: 'default',
+          onPress: () => {
+            setLanguage('en');
+            showAlert({
+              title: 'Language Updated',
+              message: 'App language changed to English',
+              type: 'success',
+              buttons: [{ text: 'OK', style: 'default' }]
+            });
+          }
         },
         { 
           text: t('settings.language.urdu'), 
-          onPress: () => setLanguage('ur')
+          style: 'default',
+          onPress: () => {
+            setLanguage('ur');
+            showAlert({
+              title: 'زبان اپ ڈیٹ ہوگئی',
+              message: 'ایپ کی زبان اردو میں تبدیل ہوگئی',
+              type: 'success',
+              buttons: [{ text: 'ٹھیک ہے', style: 'default' }]
+            });
+          }
         },
       ]
-    );
+    });
   };
 
   const SettingItem = ({ 
@@ -185,9 +236,9 @@ export default function SettingsScreen() {
             onValueChange={onSwitchChange}
             trackColor={{ 
               false: isDarkMode ? '#4b5563' : '#d1d5db', 
-              true: isDarkMode ? '#3b82f6' : '#60a5fa' 
+              true: colors.primary
             }}
-            thumbColor={switchValue ? (isDarkMode ? '#60a5fa' : '#2563eb') : '#f3f4f6'}
+            thumbColor={switchValue ? '#ffffff' : '#f3f4f6'}
           />
         )}
         {hasChevron && (
@@ -213,26 +264,21 @@ export default function SettingsScreen() {
         backgroundColor={isDarkMode ? "#111827" : "#ffffff"} 
       />
       
-      {/* Header */}
-      <View style={[styles.header, isDarkMode && styles.headerDark]}>
-        <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>
-          Settings
-        </Text>
-      </View>
+      
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         {/* Appearance Section */}
         <SectionHeader title="Appearance" />
         <View style={[styles.section, isDarkMode && styles.sectionDark]}>
           <SettingItem
-            icon={<Globe size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
+            icon={<Globe size={20} color={colors.primary} />}
             title={t('settings.language')}
             subtitle={language === 'en' ? t('settings.language.english') : t('settings.language.urdu')}
             hasChevron
             onPress={handleLanguageChange}
           />
           <SettingItem
-            icon={<Moon size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
+            icon={<Moon size={20} color={colors.primary} />}
             title={t('settings.darkMode')}
             subtitle="Switch between light and dark themes"
             hasSwitch
@@ -245,7 +291,7 @@ export default function SettingsScreen() {
         <SectionHeader title="Notifications" />
         <View style={[styles.section, isDarkMode && styles.sectionDark]}>
           <SettingItem
-            icon={<Bell size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
+            icon={<Bell size={20} color={colors.primary} />}
             title="Push Notifications"
             subtitle="Get notified about new updates"
             hasSwitch
@@ -258,7 +304,7 @@ export default function SettingsScreen() {
         <SectionHeader title="Data & Storage" />
         <View style={[styles.section, isDarkMode && styles.sectionDark]}>
           <SettingItem
-            icon={<Wifi size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
+            icon={<Wifi size={20} color={colors.primary} />}
             title="Offline Mode"
             subtitle="Cache updates for offline viewing"
             hasSwitch
@@ -266,7 +312,7 @@ export default function SettingsScreen() {
             onSwitchChange={(value) => handlePreferenceChange('offlineMode', value)}
           />
           <SettingItem
-            icon={<RefreshCw size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
+            icon={<RefreshCw size={20} color={colors.primary} />}
             title="Auto Refresh"
             subtitle={`Automatically refresh feed every ${state.preferences.refreshInterval} minutes`}
             hasSwitch
@@ -274,7 +320,7 @@ export default function SettingsScreen() {
             onSwitchChange={(value) => handlePreferenceChange('autoRefresh', value)}
           />
           <SettingItem
-            icon={<Database size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
+            icon={<Database size={20} color={colors.primary} />}
             title="Clear Cache"
             subtitle={`Current size: ${cacheSize}`}
             hasChevron
@@ -286,25 +332,14 @@ export default function SettingsScreen() {
         <SectionHeader title="Account" />
         <View style={[styles.section, isDarkMode && styles.sectionDark]}>
           <SettingItem
-            icon={<User size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
-            title="Profile"
-            subtitle={userProfile?.displayName || user?.email || "Manage your account settings"}
+            icon={<User size={20} color={colors.primary} />}
+            title="Edit Profile"
+            subtitle={userProfile?.displayName || user?.email || "Update your profile information"}
             hasChevron
-            onPress={() => {
-              console.log('Profile pressed');
-            }}
+            onPress={() => router.push('/(drawer)/edit-profile' as any)}
           />
           <SettingItem
-            icon={<Shield size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
-            title="Privacy"
-            subtitle="Control your data and privacy"
-            hasChevron
-            onPress={() => {
-              console.log('Privacy pressed');
-            }}
-          />
-          <SettingItem
-            icon={<LogOut size={20} color="#ef4444" />}
+            icon={<LogOut size={20} color={colors.status.error} />}
             title="Sign Out"
             subtitle="Sign out of your account"
             hasChevron
@@ -316,12 +351,17 @@ export default function SettingsScreen() {
         <SectionHeader title="About" />
         <View style={[styles.section, isDarkMode && styles.sectionDark]}>
           <SettingItem
-            icon={<Info size={20} color={isDarkMode ? "#60a5fa" : "#2563eb"} />}
-            title="App Information"
+            icon={<Info size={20} color={colors.primary} />}
+            title="Twin City Updates"
             subtitle="Version 1.0.0"
             hasChevron
             onPress={() => {
-              console.log('App info pressed');
+              showAlert({
+                title: 'Twin City Updates',
+                message: 'Version 1.0.0\n\nStay connected with news and updates for Islamabad & Rawalpindi.\n\nDeveloped with ❤️ for the Twin Cities',
+                type: 'info',
+                buttons: [{ text: 'OK', style: 'default' }]
+              });
             }}
           />
         </View>
@@ -336,6 +376,19 @@ export default function SettingsScreen() {
           </Text>
         </View>
       </ScrollView>
+
+      {/* Themed Alert Modal */}
+      {alertConfig && (
+        <ThemedAlert
+          visible={isVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          buttons={alertConfig.buttons}
+          onDismiss={hideAlert}
+          isDarkMode={isDarkMode}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -375,7 +428,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#374151',
     paddingHorizontal: 20,
-    paddingTop: 24,
+    paddingTop: 4,
     paddingBottom: 8,
   },
   sectionHeaderDark: {
@@ -420,13 +473,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 8,
-    backgroundColor: '#eff6ff',
+    backgroundColor: '#f3f0ff',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 12,
   },
   settingIconDark: {
-    backgroundColor: '#374151',
+    backgroundColor: '#1e1b4b',
   },
   settingText: {
     flex: 1,
@@ -459,11 +512,11 @@ const styles = StyleSheet.create({
   footerText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2563eb',
+    color: '#8b5cf6',
     marginBottom: 4,
   },
   footerTextDark: {
-    color: '#60a5fa',
+    color: '#a78bfa',
   },
   footerSubtext: {
     fontSize: 14,
@@ -481,5 +534,8 @@ const styles = StyleSheet.create({
     marginTop: 16,
     fontSize: 16,
     color: '#6b7280',
+  },
+  loadingTextDark: {
+    color: '#9ca3af',
   },
 });

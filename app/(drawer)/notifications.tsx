@@ -23,7 +23,9 @@ import {
 } from 'lucide-react-native';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
+import { useNotifications } from '../../contexts/NotificationContext';
 import { router } from 'expo-router';
+import { getThemeColors } from '../../constants/colors';
 
 interface Notification {
   id: string;
@@ -35,14 +37,23 @@ interface Notification {
   actionUrl?: string;
 }
 
+const NOTIFICATIONS_KEY = '@notifications';
+
 export default function NotificationsScreen() {
   const { user, loading: authLoading } = useAuth();
   const { state } = useApp();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const { 
+    notifications, 
+    loadNotifications, 
+    markAsRead, 
+    markAllAsRead, 
+    deleteNotification 
+  } = useNotifications();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const isDarkMode = state.preferences.darkMode;
+  const colors = getThemeColors(isDarkMode);
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -51,57 +62,14 @@ export default function NotificationsScreen() {
     }
 
     if (user) {
-      loadNotifications();
+      loadNotificationsData();
     }
   }, [user, authLoading]);
 
-  const loadNotifications = async () => {
+  const loadNotificationsData = async () => {
     try {
       setLoading(true);
-      // Mock notifications data - replace with real API call
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          title: 'New Traffic Update',
-          message: 'Heavy traffic reported on Main Street. Consider alternative routes.',
-          type: 'warning',
-          timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(), // 30 minutes ago
-          isRead: false,
-        },
-        {
-          id: '2',
-          title: 'Weather Alert',
-          message: 'Rain expected in the next 2 hours. Stay prepared.',
-          type: 'info',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // 2 hours ago
-          isRead: false,
-        },
-        {
-          id: '3',
-          title: 'Emergency Announcement',
-          message: 'Road closure on Highway 101 due to construction. Use detour route.',
-          type: 'error',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
-          isRead: true,
-        },
-        {
-          id: '4',
-          title: 'Community Event',
-          message: 'Local farmers market happening this weekend at City Park.',
-          type: 'success',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 6).toISOString(), // 6 hours ago
-          isRead: true,
-        },
-        {
-          id: '5',
-          title: 'System Update',
-          message: 'App updated successfully. New features available!',
-          type: 'info',
-          timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // 1 day ago
-          isRead: true,
-        },
-      ];
-      setNotifications(mockNotifications);
+      await loadNotifications();
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
@@ -113,28 +81,6 @@ export default function NotificationsScreen() {
     setRefreshing(true);
     await loadNotifications();
     setRefreshing(false);
-  };
-
-  const markAsRead = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.map(notification => 
-        notification.id === notificationId 
-          ? { ...notification, isRead: true }
-          : notification
-      )
-    );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notification => ({ ...notification, isRead: true }))
-    );
-  };
-
-  const deleteNotification = (notificationId: string) => {
-    setNotifications(prev => 
-      prev.filter(notification => notification.id !== notificationId)
-    );
   };
 
   const getNotificationIcon = (type: string) => {
@@ -235,8 +181,8 @@ export default function NotificationsScreen() {
             style={[styles.markReadButton, isDarkMode && styles.markReadButtonDark]}
             onPress={() => markAsRead(item.id)}
           >
-            <Check size={12} color="#2563eb" />
-            <Text style={styles.markReadText}>Mark as read</Text>
+            <Check size={12} color={colors.primary} />
+            <Text style={[styles.markReadText, { color: colors.primary }]}>Mark as read</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -261,9 +207,6 @@ export default function NotificationsScreen() {
     return (
       <View style={[styles.header, isDarkMode && styles.headerDark]}>
         <View style={styles.headerContent}>
-          <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>
-            Notifications
-          </Text>
           <Text style={[styles.headerSubtitle, isDarkMode && styles.headerSubtitleDark]}>
             {unreadCount} {unreadCount === 1 ? 'unread' : 'unread'} notification{unreadCount !== 1 ? 's' : ''}
           </Text>
@@ -274,8 +217,8 @@ export default function NotificationsScreen() {
             style={[styles.markAllReadButton, isDarkMode && styles.markAllReadButtonDark]}
             onPress={markAllAsRead}
           >
-            <Check size={16} color="#2563eb" />
-            <Text style={styles.markAllReadText}>Mark all read</Text>
+            <Check size={16} color={colors.primary} />
+            <Text style={[styles.markAllReadText, { color: colors.primary }]}>Mark all read</Text>
           </TouchableOpacity>
         )}
       </View>
@@ -285,8 +228,8 @@ export default function NotificationsScreen() {
   if (loading) {
     return (
       <View style={[styles.container, styles.loadingContainer]}>
-        <ActivityIndicator size="large" color="#2563eb" />
-        <Text style={styles.loadingText}>Loading notifications...</Text>
+        <ActivityIndicator size="large" color={colors.primary} />
+        <Text style={[styles.loadingText, isDarkMode && styles.loadingTextDark]}>Loading notifications...</Text>
       </View>
     );
   }
@@ -308,8 +251,8 @@ export default function NotificationsScreen() {
           <RefreshControl
             refreshing={refreshing}
             onRefresh={handleRefresh}
-            tintColor={isDarkMode ? '#60a5fa' : '#2563eb'}
-            colors={[isDarkMode ? '#60a5fa' : '#2563eb']}
+            tintColor={colors.primary}
+            colors={[colors.primary]}
           />
         }
         contentContainerStyle={styles.listContent}
@@ -336,9 +279,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#6b7280',
   },
+  loadingTextDark: {
+    color: '#9ca3af',
+  },
   header: {
     paddingHorizontal: 16,
-    paddingVertical: 20,
+    paddingVertical: 10,
     backgroundColor: '#ffffff',
     borderBottomWidth: 1,
     borderBottomColor: '#e5e7eb',

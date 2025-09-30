@@ -195,9 +195,6 @@ export default function SavedNewsScreen() {
   const renderHeader = () => (
     <View style={[styles.header, isDarkMode && styles.headerDark]}>
       <View style={styles.headerContent}>
-        <Text style={[styles.headerTitle, isDarkMode && styles.headerTitleDark]}>
-          Saved News
-        </Text>
         <Text style={[styles.headerSubtitle, isDarkMode && styles.headerSubtitleDark]}>
           {savedNews.length} {savedNews.length === 1 ? 'item' : 'items'} saved
         </Text>

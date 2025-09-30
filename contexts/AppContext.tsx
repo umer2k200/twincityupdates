@@ -145,7 +145,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: 'SET_LOADING', payload: true });
       
+      console.log('AppContext: Fetching updates for Twin Cities...');
       const updates = await apiService.fetchAllUpdates();
+      
+      console.log(`AppContext: Loaded ${updates.length} updates for Islamabad/Rawalpindi`);
       dispatch({ type: 'SET_UPDATES', payload: updates });
       
       // Cache updates if offline mode is enabled

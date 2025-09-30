@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff, User } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { ThemedAlert } from '../../components/ThemedAlert';
+import { useThemedAlert } from '../../hooks/useThemedAlert';
 
 export default function SignupScreen() {
   const { signUpWithEmail, signInWithGoogle, loading } = useAuth();
@@ -26,30 +28,61 @@ export default function SignupScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { alertConfig, isVisible, showAlert, hideAlert } = useThemedAlert();
 
   const validateForm = () => {
     if (!displayName.trim()) {
-      Alert.alert('Error', 'Please enter your name');
+      showAlert({
+        title: 'Name Required',
+        message: 'Please enter your name to continue',
+        type: 'warning',
+        buttons: [{ text: 'OK', style: 'default' }]
+      });
       return false;
     }
     if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
+      showAlert({
+        title: 'Email Required',
+        message: 'Please enter your email address',
+        type: 'warning',
+        buttons: [{ text: 'OK', style: 'default' }]
+      });
       return false;
     }
     if (!email.includes('@')) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      showAlert({
+        title: 'Invalid Email',
+        message: 'Please enter a valid email address',
+        type: 'error',
+        buttons: [{ text: 'OK', style: 'default' }]
+      });
       return false;
     }
     if (!password.trim()) {
-      Alert.alert('Error', 'Please enter a password');
+      showAlert({
+        title: 'Password Required',
+        message: 'Please enter a password',
+        type: 'warning',
+        buttons: [{ text: 'OK', style: 'default' }]
+      });
       return false;
     }
     if (password.length < 6) {
-      Alert.alert('Error', 'Password must be at least 6 characters long');
+      showAlert({
+        title: 'Weak Password',
+        message: 'Password must be at least 6 characters long',
+        type: 'warning',
+        buttons: [{ text: 'OK', style: 'default' }]
+      });
       return false;
     }
     if (password !== confirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert({
+        title: 'Password Mismatch',
+        message: 'Passwords do not match. Please check and try again.',
+        type: 'error',
+        buttons: [{ text: 'OK', style: 'default' }]
+      });
       return false;
     }
     return true;
@@ -81,34 +114,43 @@ export default function SignupScreen() {
       await signUpWithEmail(email.trim(), password, displayName.trim());
       
       // Show success message and redirect to login
-      Alert.alert(
-        'Account Created Successfully!',
-        'Your account has been created. Please sign in with your credentials.',
-        [
+      showAlert({
+        title: 'Account Created Successfully!',
+        message: 'Your account has been created. Please sign in with your credentials.',
+        type: 'success',
+        buttons: [
           {
             text: 'Go to Login',
+            style: 'default',
             onPress: () => router.replace('/auth/login')
           }
         ]
-      );
+      });
     } catch (error: any) {
       const errorMessage = getFirebaseErrorMessage(error);
       
       // Special handling for email already in use
       if (error?.code === 'auth/email-already-in-use') {
-        Alert.alert(
-          'Account Already Exists', 
-          errorMessage,
-          [
+        showAlert({
+          title: 'Account Already Exists',
+          message: errorMessage,
+          type: 'warning',
+          buttons: [
             { text: 'Cancel', style: 'cancel' },
             { 
               text: 'Go to Login', 
+              style: 'default',
               onPress: () => router.push('/auth/login')
             }
           ]
-        );
+        });
       } else {
-        Alert.alert('Signup Failed', errorMessage);
+        showAlert({
+          title: 'Signup Failed',
+          message: errorMessage,
+          type: 'error',
+          buttons: [{ text: 'Try Again', style: 'default' }]
+        });
       }
     }
   };
@@ -119,12 +161,19 @@ export default function SignupScreen() {
       router.replace('/(drawer)');
     } catch (error: any) {
       if (error.message?.includes('development mode')) {
-        Alert.alert(
-          'Google Sign-in Not Available', 
-          'Google Sign-in is only available in the built APK. Please use email/password authentication for now.'
-        );
+        showAlert({
+          title: 'Google Sign-in Not Available',
+          message: 'Google Sign-in is only available in the built APK. Please use email/password authentication for now.',
+          type: 'info',
+          buttons: [{ text: 'OK', style: 'default' }]
+        });
       } else {
-        Alert.alert('Google Signup Failed', error.message || 'An error occurred during Google signup');
+        showAlert({
+          title: 'Google Signup Failed',
+          message: error.message || 'An error occurred during Google signup',
+          type: 'error',
+          buttons: [{ text: 'Try Again', style: 'default' }]
+        });
       }
     }
   };
@@ -297,6 +346,19 @@ export default function SignupScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Themed Alert Modal */}
+      {alertConfig && (
+        <ThemedAlert
+          visible={isVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          buttons={alertConfig.buttons}
+          onDismiss={hideAlert}
+          isDarkMode={isDarkMode}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -379,7 +441,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   signupButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#8b5cf6',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -450,7 +512,7 @@ const styles = StyleSheet.create({
   },
   signInLink: {
     fontSize: 14,
-    color: '#2563eb',
+    color: '#8b5cf6',
     fontWeight: '600',
   },
 });

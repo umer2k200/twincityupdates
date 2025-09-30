@@ -54,11 +54,16 @@ export default function WeatherScreen() {
   const loadWeatherData = async () => {
     try {
       setLoading(true);
+      console.log('Weather Screen: Loading weather data for Islamabad & Rawalpindi...');
+      
       const [weatherData, forecastData, alertsData] = await Promise.all([
         weatherService.getCurrentWeather(),
         weatherService.getForecast('both'),
         weatherService.getWeatherAlerts(),
       ]);
+      
+      console.log('Weather Screen: Weather data loaded successfully');
+      console.log('Current weather:', weatherData.map(w => `${w.city}: ${w.temperature}°C`));
       
       setCurrentWeather(weatherData);
       setForecast(forecastData);
@@ -102,8 +107,6 @@ export default function WeatherScreen() {
   };
 
   const renderCurrentWeather = (weather: WeatherData) => {
-    const uvInfo = weatherService.getUVDescription(weather.uvIndex);
-    
     return (
       <View key={weather.id} style={[styles.currentWeatherCard, isDarkMode && styles.currentWeatherCardDark]}>
         <View style={styles.weatherHeader}>
@@ -182,21 +185,6 @@ export default function WeatherScreen() {
               </Text>
               <Text style={[styles.detailValue, isDarkMode && styles.detailValueDark]}>
                 {weather.pressure} hPa
-              </Text>
-            </View>
-          </View>
-
-          <View style={styles.uvSection}>
-            <Sun size={20} color={uvInfo.color} />
-            <Text style={[styles.detailLabel, isDarkMode && styles.detailLabelDark]}>
-              UV Index
-            </Text>
-            <View style={styles.uvInfo}>
-              <Text style={[styles.uvValue, isDarkMode && styles.uvValueDark, { color: uvInfo.color }]}>
-                {weather.uvIndex} - {uvInfo.level}
-              </Text>
-              <Text style={[styles.uvAdvice, isDarkMode && styles.uvAdviceDark]}>
-                {uvInfo.advice}
               </Text>
             </View>
           </View>
@@ -605,36 +593,6 @@ const styles = StyleSheet.create({
   },
   detailValueDark: {
     color: '#f9fafb',
-  },
-  uvSection: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    backgroundColor: '#f3f4f6',
-    borderRadius: 8,
-  },
-  uvSectionDark: {
-    backgroundColor: '#374151',
-  },
-  uvInfo: {
-    marginLeft: 8,
-    flex: 1,
-  },
-  uvValue: {
-    fontSize: 14,
-    fontWeight: '600',
-  },
-  uvValueDark: {
-    color: '#f9fafb',
-  },
-  uvAdvice: {
-    fontSize: 12,
-    color: '#6b7280',
-  },
-  uvAdviceDark: {
-    color: '#9ca3af',
   },
   section: {
     marginBottom: 24,

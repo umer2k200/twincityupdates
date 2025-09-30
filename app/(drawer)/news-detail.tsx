@@ -11,6 +11,7 @@ import {
   Alert,
   Dimensions,
   Platform,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2, ExternalLink, Clock, MapPin, User, Navigation } from 'lucide-react-native';
@@ -204,13 +205,13 @@ export default function NewsDetailScreen() {
 
       <ScrollView style={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* News Image */}
-        {newsData.image && (
+        {(newsData.mediaUrl || newsData.image) && (
           <View style={styles.imageContainer}>
-            <View style={[styles.imagePlaceholder, isDarkMode && styles.imagePlaceholderDark]}>
-              <Text style={[styles.imageText, isDarkMode && styles.imageTextDark]}>
-                📰
-              </Text>
-            </View>
+            <Image 
+              source={{ uri: newsData.mediaUrl || newsData.image }} 
+              style={styles.newsImage}
+              resizeMode="cover"
+            />
           </View>
         )}
 
@@ -223,12 +224,14 @@ export default function NewsDetailScreen() {
 
           {/* Meta Information */}
           <View style={styles.metaContainer}>
-            <View style={styles.metaItem}>
-              <User size={16} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
-              <Text style={[styles.metaText, isDarkMode && styles.metaTextDark]}>
-                {newsData.source}
-              </Text>
-            </View>
+            {newsData.author && (
+              <View style={styles.metaItem}>
+                <User size={16} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
+                <Text style={[styles.metaText, isDarkMode && styles.metaTextDark]}>
+                  {newsData.author}
+                </Text>
+              </View>
+            )}
             
             <View style={styles.metaItem}>
               <Clock size={16} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
@@ -237,7 +240,7 @@ export default function NewsDetailScreen() {
               </Text>
             </View>
             
-            {newsData.location && (
+            {newsData.location && newsData.location.name && (
               <View style={styles.metaItem}>
                 <MapPin size={16} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
                 <Text style={[styles.metaText, isDarkMode && styles.metaTextDark]}>
@@ -358,6 +361,25 @@ export default function NewsDetailScreen() {
             </View>
           )}
 
+          {/* Read Full Article Button */}
+          {newsData.sourceUrl && (
+            <TouchableOpacity
+              style={[styles.readFullArticleButton, isDarkMode && styles.readFullArticleButtonDark]}
+              onPress={() => {
+                if (newsData.sourceUrl) {
+                  Linking.openURL(newsData.sourceUrl).catch(() => {
+                    Alert.alert('Error', 'Could not open the article URL');
+                  });
+                }
+              }}
+            >
+              <ExternalLink size={18} color={isDarkMode ? '#a78bfa' : '#8b5cf6'} />
+              <Text style={[styles.readFullArticleText, isDarkMode && styles.readFullArticleTextDark]}>
+                Read Full Article
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Additional Details */}
           {newsData.additionalInfo && (
             <View style={[styles.additionalInfo, isDarkMode && styles.additionalInfoDark]}>
@@ -436,6 +458,11 @@ const styles = StyleSheet.create({
     margin: 16,
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  newsImage: {
+    width: '100%',
+    height: 250,
+    backgroundColor: '#f3f4f6',
   },
   imagePlaceholder: {
     height: 200,
@@ -527,6 +554,31 @@ const styles = StyleSheet.create({
   },
   contentDark: {
     color: '#d1d5db',
+  },
+  readFullArticleButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#f3f0ff',
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: '#8b5cf6',
+    marginBottom: 24,
+    gap: 8,
+  },
+  readFullArticleButtonDark: {
+    backgroundColor: '#1e1b4b',
+    borderColor: '#a78bfa',
+  },
+  readFullArticleText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#8b5cf6',
+  },
+  readFullArticleTextDark: {
+    color: '#a78bfa',
   },
   additionalInfo: {
     backgroundColor: '#f9fafb',

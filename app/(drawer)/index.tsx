@@ -16,12 +16,7 @@ import {
   RefreshCw, 
   Wifi, 
   WifiOff,
-  AlertCircle,
-  AlertTriangle,
-  Clock,
-  MapPin,
-  Phone,
-  ExternalLink
+  AlertCircle
 } from 'lucide-react-native';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
@@ -30,7 +25,6 @@ import { UpdateCard } from '../../components/UpdateCard';
 import { SearchBar } from '../../components/SearchBar';
 import { router } from 'expo-router';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { alertService, Alert } from '../../services/alertService';
 import { getThemeColors } from '../../constants/colors';
 
 const SAVED_NEWS_KEY = 'saved_news';
@@ -50,8 +44,6 @@ export default function HomeScreen() {
   const [showCategories, setShowCategories] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [savedNewsIds, setSavedNewsIds] = useState<Set<string>>(new Set());
-  const [alerts, setAlerts] = useState<Alert[]>([]);
-  const [alertsLoading, setAlertsLoading] = useState(true);
   
   const isDarkMode = state.preferences.darkMode;
   const colors = getThemeColors(isDarkMode);
@@ -78,7 +70,6 @@ export default function HomeScreen() {
     if (user) {
       fetchUpdates();
       loadSavedNewsIds();
-      loadAlerts();
     }
   }, [user, authLoading]);
 
@@ -95,17 +86,6 @@ export default function HomeScreen() {
     }
   };
 
-  const loadAlerts = async () => {
-    try {
-      setAlertsLoading(true);
-      const activeAlerts = await alertService.getActiveAlerts();
-      setAlerts(activeAlerts);
-    } catch (error) {
-      console.error('Error loading alerts:', error);
-    } finally {
-      setAlertsLoading(false);
-    }
-  };
 
   const handleSaveNews = async (newsItem: any) => {
     try {
@@ -158,7 +138,6 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     await refreshUpdates();
-    await loadAlerts();
   };
 
   const handleSearch = (query: string) => {
@@ -209,119 +188,6 @@ export default function HomeScreen() {
     </View>
   );
 
-  const renderAlertBanner = () => {
-    if (alertsLoading) {
-      return (
-        <View style={[styles.alertBanner, isDarkMode && styles.alertBannerDark]}>
-          <ActivityIndicator size="small" color={colors.primary} />
-          <Text style={[styles.alertLoadingText, isDarkMode && styles.alertLoadingTextDark]}>
-            Loading alerts...
-          </Text>
-        </View>
-      );
-    }
-
-    if (alerts.length === 0) {
-      return null;
-    }
-
-    // Show only the highest priority alert as banner
-    const topAlert = alerts[0];
-
-    return (
-      <View style={[
-        styles.alertBanner, 
-        isDarkMode && styles.alertBannerDark,
-        { borderLeftColor: topAlert.color }
-      ]}>
-        <View style={styles.alertHeader}>
-          <View style={styles.alertTitleRow}>
-            <Text style={styles.alertIcon}>{topAlert.icon}</Text>
-            <View style={styles.alertTitleContainer}>
-              <View style={styles.alertBadgeContainer}>
-                <Text style={[
-                  styles.alertBadge,
-                  { backgroundColor: topAlert.color }
-                ]}>
-                  {alertService.getPriorityLabel(topAlert.priority)}
-                </Text>
-                <Text style={[
-                  styles.alertTypeBadge,
-                  isDarkMode && styles.alertTypeBadgeDark
-                ]}>
-                  {alertService.getTypeLabel(topAlert.type)}
-                </Text>
-              </View>
-              <Text style={[styles.alertTitle, isDarkMode && styles.alertTitleDark]}>
-                {topAlert.title}
-              </Text>
-            </View>
-          </View>
-          {topAlert.endTime && (
-            <View style={styles.alertTimeContainer}>
-              <Clock size={12} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
-              <Text style={[styles.alertTime, isDarkMode && styles.alertTimeDark]}>
-                {alertService.getTimeRemaining(topAlert.endTime)}
-              </Text>
-            </View>
-          )}
-        </View>
-        
-        <Text style={[styles.alertDescription, isDarkMode && styles.alertDescriptionDark]}>
-          {topAlert.description}
-        </Text>
-        
-        {topAlert.location && (
-          <View style={styles.alertLocationContainer}>
-            <MapPin size={12} color={isDarkMode ? '#9ca3af' : '#6b7280'} />
-            <Text style={[styles.alertLocation, isDarkMode && styles.alertLocationDark]}>
-              {topAlert.location}
-            </Text>
-          </View>
-        )}
-
-        {topAlert.actions && topAlert.actions.length > 0 && (
-          <View style={styles.alertActions}>
-            {topAlert.actions.slice(0, 2).map((action) => (
-              <TouchableOpacity
-                key={action.id}
-                style={[
-                  styles.alertActionButton,
-                  isDarkMode && styles.alertActionButtonDark
-                ]}
-                onPress={() => {
-                  if (action.type === 'phone') {
-                    // Handle phone call
-                    console.log('Call:', action.action);
-                  } else if (action.type === 'link') {
-                    // Handle navigation to different screens
-                    if (action.action === 'weather') {
-                      router.push('/(drawer)/weather');
-                    } else if (action.action === 'emergency') {
-                      // Handle emergency info
-                      console.log('Emergency info:', action.action);
-                    }
-                  }
-                }}
-              >
-                {action.type === 'phone' ? (
-                  <Phone size={12} color={topAlert.color} />
-                ) : (
-                  <ExternalLink size={12} color={topAlert.color} />
-                )}
-                <Text style={[
-                  styles.alertActionText,
-                  { color: topAlert.color }
-                ]}>
-                  {action.label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        )}
-      </View>
-    );
-  };
 
   const renderHeader = () => (
     <View style={styles.header}>
@@ -458,9 +324,6 @@ export default function HomeScreen() {
         barStyle={isDarkMode ? "light-content" : "dark-content"} 
         backgroundColor={isDarkMode ? "#111827" : "#ffffff"} 
       />
-      
-      {/* Alert Banner */}
-      {renderAlertBanner()}
       
       <FlatList
         data={state.filteredUpdates}

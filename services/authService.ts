@@ -194,16 +194,39 @@ class AuthService {
   // Sign Out
   async signOut(): Promise<void> {
     try {
+      console.log('Starting sign out process...');
+      
       // Sign out from Google if signed in with Google and GoogleSignin is available
       if (GoogleSignin) {
-        const isSignedIn = await GoogleSignin.isSignedIn();
-        if (isSignedIn) {
-          await GoogleSignin.signOut();
+        try {
+          const isSignedIn = await GoogleSignin.isSignedIn();
+          if (isSignedIn) {
+            console.log('Signing out from Google...');
+            await GoogleSignin.signOut();
+            console.log('Google sign out successful');
+          }
+        } catch (googleError) {
+          console.error('Error signing out from Google:', googleError);
+          // Continue with Firebase sign out even if Google sign out fails
         }
       }
       
       // Sign out from Firebase
+      console.log('Signing out from Firebase...');
       await signOut(auth);
+      console.log('Firebase sign out successful');
+      
+      // Clear any local storage that might persist user data
+      try {
+        const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+        await AsyncStorage.removeItem('userToken');
+        await AsyncStorage.removeItem('userData');
+        console.log('Local storage cleared');
+      } catch (storageError) {
+        console.error('Error clearing local storage:', storageError);
+        // Not critical, continue
+      }
+      
     } catch (error) {
       console.error('Error signing out:', error);
       throw error;

@@ -114,6 +114,8 @@ export const getThemeColors = (isDarkMode: boolean) => ({
   borderLight: isDarkMode ? Colors.neutral[600] : Colors.neutral[300],
   
   shadow: isDarkMode ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.1)',
+  
+  status: Colors.status,
 });
 
 export default Colors;

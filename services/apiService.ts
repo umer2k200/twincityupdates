@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { newsApiService } from './newsApiService';
 
 export interface SocialUpdate {
   id: string;
@@ -22,6 +23,7 @@ export interface SocialUpdate {
       longitude: number;
     };
   };
+  sourceUrl?: string;
 }
 
 // Mock API responses for testing
@@ -246,6 +248,20 @@ class ApiService {
   // Fetch all updates from all sources
   async fetchAllUpdates(): Promise<SocialUpdate[]> {
     try {
+      console.log('Fetching all updates from APIs and mock data...');
+      
+      // Fetch from real APIs (NewsAPI, GNews, etc.)
+      const realNewsData = await newsApiService.fetchAllNews();
+      
+      // If we have real data, use it; otherwise use mock data
+      if (realNewsData.length > 0) {
+        console.log(`Fetched ${realNewsData.length} real news articles`);
+        return realNewsData;
+      }
+      
+      console.log('No real news data available, using mock data');
+      
+      // Fallback to mock data
       const [whatsappUpdates, twitterUpdates, facebookUpdates] = await Promise.all([
         this.fetchWhatsAppUpdates(),
         this.fetchTwitterUpdates(),

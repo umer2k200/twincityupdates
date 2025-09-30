@@ -9,7 +9,7 @@ import {
   Share,
   Alert
 } from 'react-native';
-import { Twitter, Facebook, MessageCircle, Heart, Share2, ExternalLink, Bookmark, BookmarkCheck, MapPin } from 'lucide-react-native';
+import { Heart, Share2, ExternalLink, Bookmark, BookmarkCheck, MapPin } from 'lucide-react-native';
 import { SocialUpdate } from '../services/apiService';
 import { getThemeColors } from '../constants/colors';
 
@@ -54,34 +54,6 @@ export function UpdateCard({
       Alert.alert('Error', 'Failed to share content. Please try again.');
     }
   };
-  const getSourceIcon = (source: string) => {
-    const iconProps = { size: 18, color: colors.text.primary };
-    
-    switch (source) {
-      case 'twitter':
-        return <Twitter {...iconProps} color="#1da1f2" />;
-      case 'facebook':
-        return <Facebook {...iconProps} color="#1877f2" />;
-      case 'whatsapp':
-        return <MessageCircle {...iconProps} color="#25d366" />;
-      default:
-        return <MessageCircle {...iconProps} />;
-    }
-  };
-
-  const getSourceName = (source: string) => {
-    switch (source) {
-      case 'twitter':
-        return 'Twitter';
-      case 'facebook':
-        return 'Facebook';
-      case 'whatsapp':
-        return 'WhatsApp Business';
-      default:
-        return 'Unknown';
-    }
-  };
-
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
@@ -113,22 +85,18 @@ export function UpdateCard({
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.sourceInfo}>
-          {getSourceIcon(update.source)}
           <View style={styles.sourceText}>
-            <View style={styles.sourceNameRow}>
-              <Text style={[styles.sourceName, isDarkMode && styles.textDark]}>
-                {getSourceName(update.source)}
-              </Text>
-              {update.hasLocation && (
-                <View style={styles.locationIndicator}>
-                  <MapPin size={12} color={colors.primary} />
-                </View>
-              )}
-            </View>
             {update.author && (
-              <Text style={[styles.author, isDarkMode && styles.authorDark]}>
-                {update.author}
-              </Text>
+              <View style={styles.sourceNameRow}>
+                <Text style={[styles.sourceName, isDarkMode && styles.textDark]}>
+                  {update.author}
+                </Text>
+                {update.hasLocation && (
+                  <View style={styles.locationIndicator}>
+                    <MapPin size={12} color={colors.primary} />
+                  </View>
+                )}
+              </View>
             )}
           </View>
         </View>

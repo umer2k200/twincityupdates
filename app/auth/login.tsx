@@ -16,6 +16,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Link, router } from 'expo-router';
 import { Mail, Lock, Eye, EyeOff } from 'lucide-react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { ThemedAlert } from '../../components/ThemedAlert';
+import { useThemedAlert } from '../../hooks/useThemedAlert';
 
 export default function LoginScreen() {
   const { signInWithEmail, signInWithGoogle, loading } = useAuth();
@@ -23,6 +25,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { alertConfig, isVisible, showAlert, hideAlert } = useThemedAlert();
 
   const getFirebaseErrorMessage = (error: any) => {
     const errorCode = error?.code || '';
@@ -49,7 +52,12 @@ export default function LoginScreen() {
 
   const handleEmailLogin = async () => {
     if (!email.trim() || !password.trim()) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert({
+        title: 'Missing Information',
+        message: 'Please fill in all fields to continue',
+        type: 'warning',
+        buttons: [{ text: 'OK', style: 'default' }]
+      });
       return;
     }
 
@@ -61,19 +69,26 @@ export default function LoginScreen() {
       
       // Special handling for user not found
       if (error?.code === 'auth/user-not-found') {
-        Alert.alert(
-          'Account Not Found', 
-          errorMessage,
-          [
+        showAlert({
+          title: 'Account Not Found',
+          message: errorMessage,
+          type: 'error',
+          buttons: [
             { text: 'Cancel', style: 'cancel' },
             { 
               text: 'Create Account', 
+              style: 'default',
               onPress: () => router.push('/auth/signup')
             }
           ]
-        );
+        });
       } else {
-        Alert.alert('Login Failed', errorMessage);
+        showAlert({
+          title: 'Login Failed',
+          message: errorMessage,
+          type: 'error',
+          buttons: [{ text: 'Try Again', style: 'default' }]
+        });
       }
     }
   };
@@ -84,12 +99,19 @@ export default function LoginScreen() {
       router.replace('/(drawer)');
     } catch (error: any) {
       if (error.message?.includes('development mode')) {
-        Alert.alert(
-          'Google Sign-in Not Available', 
-          'Google Sign-in is only available in the built APK. Please use email/password authentication for now.'
-        );
+        showAlert({
+          title: 'Google Sign-in Not Available',
+          message: 'Google Sign-in is only available in the built APK. Please use email/password authentication for now.',
+          type: 'info',
+          buttons: [{ text: 'OK', style: 'default' }]
+        });
       } else {
-        Alert.alert('Google Login Failed', error.message || 'An error occurred during Google login');
+        showAlert({
+          title: 'Google Login Failed',
+          message: error.message || 'An error occurred during Google login',
+          type: 'error',
+          buttons: [{ text: 'Try Again', style: 'default' }]
+        });
       }
     }
   };
@@ -214,6 +236,19 @@ export default function LoginScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Themed Alert Modal */}
+      {alertConfig && (
+        <ThemedAlert
+          visible={isVisible}
+          title={alertConfig.title}
+          message={alertConfig.message}
+          type={alertConfig.type}
+          buttons={alertConfig.buttons}
+          onDismiss={hideAlert}
+          isDarkMode={isDarkMode}
+        />
+      )}
     </SafeAreaView>
   );
 }
@@ -296,7 +331,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   loginButton: {
-    backgroundColor: '#2563eb',
+    backgroundColor: '#8b5cf6',
     borderRadius: 12,
     paddingVertical: 16,
     alignItems: 'center',
@@ -367,7 +402,7 @@ const styles = StyleSheet.create({
   },
   signUpLink: {
     fontSize: 14,
-    color: '#2563eb',
+    color: '#8b5cf6',
     fontWeight: '600',
   },
 });
