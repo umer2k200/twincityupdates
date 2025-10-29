@@ -2,10 +2,16 @@
 // Integrates NewsAPI.org and GNews for Pakistani news
 
 import axios from 'axios';
+import Constants from 'expo-constants';
 import { SocialUpdate } from './apiService';
 
-const NEWS_API_KEY = process.env.EXPO_PUBLIC_NEWS_API_KEY;
-const GNEWS_API_KEY = process.env.EXPO_PUBLIC_GNEWS_API_KEY;
+// Get environment variables - try both process.env and Constants.expoConfig.extra
+const NEWS_API_KEY = process.env.EXPO_PUBLIC_NEWS_API_KEY || 
+  Constants.expoConfig?.extra?.NEWS_API_KEY || 
+  (Constants.manifest as any)?.extra?.NEWS_API_KEY;
+const GNEWS_API_KEY = process.env.EXPO_PUBLIC_GNEWS_API_KEY || 
+  Constants.expoConfig?.extra?.GNEWS_API_KEY || 
+  (Constants.manifest as any)?.extra?.GNEWS_API_KEY;
 
 class NewsApiService {
   private newsApiUrl = 'https://newsapi.org/v2';
@@ -14,11 +20,13 @@ class NewsApiService {
   // Fetch news from NewsAPI.org
   async fetchNewsApi(): Promise<SocialUpdate[]> {
     if (!NEWS_API_KEY || NEWS_API_KEY === 'your_newsapi_key_here') {
-      console.log('NewsAPI key not configured - skipping NewsAPI integration');
+      console.warn('[NewsService] NewsAPI key not configured - skipping NewsAPI integration');
+      console.warn('[NewsService] To enable NewsAPI, set EXPO_PUBLIC_NEWS_API_KEY in your .env file');
       return [];
     }
 
     try {
+      console.log('[NewsService] Fetching from NewsAPI...');
       const response = await axios.get(`${this.newsApiUrl}/everything`, {
         params: {
           q: '(Islamabad OR Rawalpindi) AND (news OR update OR event OR traffic OR weather)',
@@ -26,7 +34,8 @@ class NewsApiService {
           sortBy: 'publishedAt',
           pageSize: 30,
           apiKey: NEWS_API_KEY
-        }
+        },
+        timeout: 10000 // 10 second timeout
       });
 
       // Filter to only include articles specifically about Rawalpindi or Islamabad
@@ -35,7 +44,7 @@ class NewsApiService {
         return text.includes('islamabad') || text.includes('rawalpindi');
       });
 
-      console.log(`NewsAPI: Found ${filteredArticles.length} articles about Islamabad/Rawalpindi`);
+      console.log(`[NewsService] NewsAPI: Found ${filteredArticles.length} articles about Islamabad/Rawalpindi`);
 
       return filteredArticles.map((article: any, index: number) => ({
         id: `newsapi-${index}-${Date.now()}`,
@@ -52,8 +61,13 @@ class NewsApiService {
         hasLocation: this.hasLocationInfo(article.title + ' ' + article.description),
         sourceUrl: article.url,
       }));
-    } catch (error) {
-      console.error('Error fetching from NewsAPI:', error);
+    } catch (error: any) {
+      console.error('[NewsService] Error fetching from NewsAPI:', error?.message || error);
+      if (error?.response?.status === 401) {
+        console.error('[NewsService] NewsAPI authentication failed - check your API key');
+      } else if (error?.code === 'ECONNABORTED') {
+        console.error('[NewsService] NewsAPI request timeout');
+      }
       return [];
     }
   }
@@ -61,11 +75,13 @@ class NewsApiService {
   // Fetch news from GNews API
   async fetchGNews(): Promise<SocialUpdate[]> {
     if (!GNEWS_API_KEY || GNEWS_API_KEY === 'your_gnews_api_key_here') {
-      console.log('GNews API key not configured - skipping GNews integration');
+      console.warn('[NewsService] GNews API key not configured - skipping GNews integration');
+      console.warn('[NewsService] To enable GNews, set EXPO_PUBLIC_GNEWS_API_KEY in your .env file');
       return [];
     }
 
     try {
+      console.log('[NewsService] Fetching from GNews...');
       const response = await axios.get(`${this.gnewsApiUrl}/search`, {
         params: {
           q: '(Islamabad OR Rawalpindi) twin cities Pakistan',
@@ -73,7 +89,8 @@ class NewsApiService {
           country: 'pk',
           max: 30,
           apikey: GNEWS_API_KEY
-        }
+        },
+        timeout: 10000 // 10 second timeout
       });
 
       // Filter to only include articles specifically about Rawalpindi or Islamabad
@@ -82,7 +99,7 @@ class NewsApiService {
         return text.includes('islamabad') || text.includes('rawalpindi');
       });
 
-      console.log(`GNews: Found ${filteredArticles.length} articles about Islamabad/Rawalpindi`);
+      console.log(`[NewsService] GNews: Found ${filteredArticles.length} articles about Islamabad/Rawalpindi`);
 
       return filteredArticles.map((article: any, index: number) => ({
         id: `gnews-${index}-${Date.now()}`,
@@ -99,8 +116,13 @@ class NewsApiService {
         hasLocation: this.hasLocationInfo(article.title + ' ' + article.description),
         sourceUrl: article.url,
       }));
-    } catch (error) {
-      console.error('Error fetching from GNews:', error);
+    } catch (error: any) {
+      console.error('[NewsService] Error fetching from GNews:', error?.message || error);
+      if (error?.response?.status === 401 || error?.response?.status === 403) {
+        console.error('[NewsService] GNews authentication failed - check your API key');
+      } else if (error?.code === 'ECONNABORTED') {
+        console.error('[NewsService] GNews request timeout');
+      }
       return [];
     }
   }
@@ -188,7 +210,11 @@ class NewsApiService {
 
   // Fetch all news from available sources
   async fetchAllNews(): Promise<SocialUpdate[]> {
-    console.log('Fetching news for Twin Cities (Islamabad & Rawalpindi)...');
+    console.log('[NewsService] Fetching news for Twin Cities (Islamabad & Rawalpindi)...');
+    console.log('[NewsService] API Keys Status:', {
+      hasNewsAPI: !!NEWS_API_KEY && NEWS_API_KEY !== 'your_newsapi_key_here',
+      hasGNews: !!GNEWS_API_KEY && GNEWS_API_KEY !== 'your_gnews_api_key_here'
+    });
     
     const [newsApiData, gnewsData, rssData] = await Promise.all([
       this.fetchNewsApi(),
@@ -206,7 +232,11 @@ class NewsApiService {
              text.includes('twin cit');
     });
 
-    console.log(`Total news fetched: ${allNews.length}, Twin Cities specific: ${twinCitiesNews.length}`);
+    console.log(`[NewsService] Total news fetched: ${allNews.length}, Twin Cities specific: ${twinCitiesNews.length}`);
+    
+    if (twinCitiesNews.length === 0 && allNews.length === 0) {
+      console.warn('[NewsService] No news fetched - check API keys configuration');
+    }
     
     // Sort by timestamp (newest first)
     return twinCitiesNews.sort((a, b) => 

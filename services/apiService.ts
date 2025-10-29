@@ -248,20 +248,35 @@ class ApiService {
   // Fetch all updates from all sources
   async fetchAllUpdates(): Promise<SocialUpdate[]> {
     try {
-      console.log('Fetching all updates from APIs and mock data...');
+      console.log('[ApiService] Fetching all updates from APIs...');
       
-      // Fetch from real APIs (NewsAPI, GNews, etc.)
+      // Always try to fetch from real APIs first
       const realNewsData = await newsApiService.fetchAllNews();
       
-      // If we have real data, use it; otherwise use mock data
+      // If we have real data, use it
       if (realNewsData.length > 0) {
-        console.log(`Fetched ${realNewsData.length} real news articles`);
+        console.log(`[ApiService] Successfully fetched ${realNewsData.length} real news articles`);
         return realNewsData;
       }
       
-      console.log('No real news data available, using mock data');
+      // If no real data, check if API keys are configured
+      const hasNewsAPIKey = process.env.EXPO_PUBLIC_NEWS_API_KEY && 
+                           process.env.EXPO_PUBLIC_NEWS_API_KEY !== 'your_newsapi_key_here';
+      const hasGNewsKey = process.env.EXPO_PUBLIC_GNEWS_API_KEY && 
+                         process.env.EXPO_PUBLIC_GNEWS_API_KEY !== 'your_gnews_api_key_here';
       
-      // Fallback to mock data
+      if (hasNewsAPIKey || hasGNewsKey) {
+        // API keys are configured but returned no data - might be network issue or API problem
+        console.warn('[ApiService] API keys configured but no news fetched - possible network or API issue');
+        console.warn('[ApiService] Returning empty array instead of mock data');
+        return [];
+      }
+      
+      // No API keys configured - only then use mock data as last resort
+      console.warn('[ApiService] No API keys configured and no real news data - using mock data');
+      console.warn('[ApiService] To get real news, configure EXPO_PUBLIC_NEWS_API_KEY and/or EXPO_PUBLIC_GNEWS_API_KEY');
+      
+      // Fallback to mock data only if no API keys are set
       const [whatsappUpdates, twitterUpdates, facebookUpdates] = await Promise.all([
         this.fetchWhatsAppUpdates(),
         this.fetchTwitterUpdates(),
@@ -274,11 +289,11 @@ class ApiService {
       return allUpdates.sort((a, b) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
-    } catch (error) {
-      console.error('Error fetching all updates:', error);
-      return mockUpdates.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
+    } catch (error: any) {
+      console.error('[ApiService] Error fetching all updates:', error?.message || error);
+      // Don't return mock data on error - return empty array or handle error properly
+      console.error('[ApiService] Returning empty array due to error');
+      return [];
     }
   }
 
