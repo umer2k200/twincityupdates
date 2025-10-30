@@ -8,6 +8,8 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  Platform,
+  Share,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Bookmark, BookmarkCheck, Trash2, Share2 } from 'lucide-react-native';
@@ -145,7 +147,16 @@ export default function SavedNewsScreen() {
           style={[styles.actionButton, styles.shareButton]}
           onPress={async () => {
             try {
-              const { Share } = await import('react-native');
+              // Only use native Share on native platforms
+              if (Platform.OS === 'web') {
+                // Web fallback - copy to clipboard
+                if (navigator.clipboard) {
+                  await navigator.clipboard.writeText(`${item.title}\n\n${item.content}`);
+                  Alert.alert('Copied', 'Content copied to clipboard!');
+                }
+                return;
+              }
+
               const shareContent = {
                 title: item.title || 'Twin City Updates',
                 message: `${item.title}\n\n${item.content}\n\nSource: ${item.source}\nTime: ${item.timestamp}\n\nShared from Twin City Updates app`,
