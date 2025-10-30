@@ -17,6 +17,77 @@ class NewsApiService {
   private newsApiUrl = 'https://newsapi.org/v2';
   private gnewsApiUrl = 'https://gnews.io/api/v4';
 
+  // Fetch traffic-focused news for Islamabad/Rawalpindi
+  async fetchTrafficNews(): Promise<SocialUpdate[]> {
+    const queries = [
+      {
+        url: `${this.newsApiUrl}/everything`,
+        params: {
+          q: '(Islamabad OR Rawalpindi) AND (traffic OR road OR accident OR closure OR jam OR diversion OR police)',
+          language: 'en',
+          sortBy: 'publishedAt',
+          pageSize: 30,
+          apiKey: NEWS_API_KEY
+        }
+      },
+      {
+        url: `${this.gnewsApiUrl}/search`,
+        params: {
+          q: '((Islamabad OR Rawalpindi) (traffic OR road OR accident OR closure OR jam OR diversion))',
+          lang: 'en',
+          country: 'pk',
+          max: 30,
+          apikey: GNEWS_API_KEY
+        }
+      }
+    ];
+
+    try {
+      const [newsResp, gnewsResp] = await Promise.all([
+        NEWS_API_KEY && NEWS_API_KEY !== 'your_newsapi_key_here' ? axios.get(queries[0].url, { params: queries[0].params, timeout: 10000 }) : Promise.resolve({ data: { articles: [] } }),
+        GNEWS_API_KEY && GNEWS_API_KEY !== 'your_gnews_api_key_here' ? axios.get(queries[1].url, { params: queries[1].params, timeout: 10000 }) : Promise.resolve({ data: { articles: [] } }),
+      ]);
+
+      const newsapiArticles = (newsResp as any).data?.articles || [];
+      const gnewsArticles = (gnewsResp as any).data?.articles || [];
+
+      const mappedNewsapi = newsapiArticles.map((article: any, index: number) => ({
+        id: `traffic-newsapi-${index}-${Date.now()}`,
+        source: 'news',
+        title: article.title || 'Traffic Update',
+        content: article.description || article.content || 'No content available',
+        timestamp: article.publishedAt,
+        hasMedia: !!article.urlToImage,
+        mediaUrl: article.urlToImage,
+        mediaType: 'image' as const,
+        author: article.source?.name,
+        category: 'traffic',
+        hasLocation: true,
+        sourceUrl: article.url,
+      }));
+
+      const mappedGnews = gnewsArticles.map((article: any, index: number) => ({
+        id: `traffic-gnews-${index}-${Date.now()}`,
+        source: 'news',
+        title: article.title || 'Traffic Update',
+        content: article.description || article.content || 'No content available',
+        timestamp: article.publishedAt,
+        hasMedia: !!article.image,
+        mediaUrl: article.image,
+        mediaType: 'image' as const,
+        author: article.source?.name,
+        category: 'traffic',
+        hasLocation: true,
+        sourceUrl: article.url,
+      }));
+
+      return [...mappedNewsapi, ...mappedGnews];
+    } catch (error) {
+      console.error('[NewsService] Error fetching traffic news:', (error as any)?.message || error);
+      return [];
+    }
+  }
+
   // Fetch news from NewsAPI.org
   async fetchNewsApi(): Promise<SocialUpdate[]> {
     if (!NEWS_API_KEY || NEWS_API_KEY === 'your_newsapi_key_here') {
@@ -48,7 +119,7 @@ class NewsApiService {
 
       return filteredArticles.map((article: any, index: number) => ({
         id: `newsapi-${index}-${Date.now()}`,
-        source: 'twitter', // Using twitter as generic news source
+        source: 'news',
         title: article.title || 'Untitled',
         content: article.description || article.content || 'No content available',
         timestamp: article.publishedAt,
@@ -103,7 +174,7 @@ class NewsApiService {
 
       return filteredArticles.map((article: any, index: number) => ({
         id: `gnews-${index}-${Date.now()}`,
-        source: 'facebook', // Using facebook as another generic news source
+        source: 'news',
         title: article.title || 'Untitled',
         content: article.description || article.content || 'No content available',
         timestamp: article.publishedAt,
@@ -216,13 +287,14 @@ class NewsApiService {
       hasGNews: !!GNEWS_API_KEY && GNEWS_API_KEY !== 'your_gnews_api_key_here'
     });
     
-    const [newsApiData, gnewsData, rssData] = await Promise.all([
+    const [newsApiData, gnewsData, rssData, trafficNews] = await Promise.all([
       this.fetchNewsApi(),
       this.fetchGNews(),
-      this.fetchPakistaniRSS()
+      this.fetchPakistaniRSS(),
+      this.fetchTrafficNews()
     ]);
 
-    const allNews = [...newsApiData, ...gnewsData, ...rssData];
+    const allNews = [...newsApiData, ...gnewsData, ...rssData, ...trafficNews];
     
     // Double filter to ensure only Twin Cities news
     const twinCitiesNews = allNews.filter(news => {

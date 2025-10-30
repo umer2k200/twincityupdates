@@ -10,6 +10,42 @@ const TWITTER_BEARER_TOKEN = process.env.EXPO_PUBLIC_TWITTER_BEARER_TOKEN ||
 
 class TwitterService {
   private apiUrl = 'https://api.twitter.com/2';
+  // Simple in-memory cache and rate-limit tracking
+  private accountCache: Map<string, { expiresAt: number; data: SocialUpdate[] }> = new Map();
+  private searchCache: Map<string, { expiresAt: number; data: SocialUpdate[] }> = new Map();
+  private rateLimitedUntilEpochMs: number | null = null;
+
+  private isRateLimited(): boolean {
+    return this.rateLimitedUntilEpochMs !== null && Date.now() < this.rateLimitedUntilEpochMs;
+  }
+
+  private setRateLimitFromHeaders(headers: any) {
+    const resetHeader = headers?.['x-rate-limit-reset'];
+    const resetSeconds = resetHeader ? Number(resetHeader) : null;
+    if (resetSeconds && !Number.isNaN(resetSeconds)) {
+      this.rateLimitedUntilEpochMs = resetSeconds * 1000;
+    } else {
+      // default 15 minutes window
+      this.rateLimitedUntilEpochMs = Date.now() + 15 * 60 * 1000;
+    }
+  }
+
+  private cacheGet(store: Map<string, { expiresAt: number; data: SocialUpdate[] }>, key: string): SocialUpdate[] | null {
+    const entry = store.get(key);
+    if (entry && entry.expiresAt > Date.now()) return entry.data;
+    if (entry) store.delete(key);
+    return null;
+  }
+
+  private cacheSet(store: Map<string, { expiresAt: number; data: SocialUpdate[] }>, key: string, data: SocialUpdate[], ttlMs: number) {
+    store.set(key, { expiresAt: Date.now() + ttlMs, data });
+  }
+
+  // Time window helper (RFC3339) for limiting results to recent days
+  private getStartTimeIso(days: number = 2): string {
+    const sinceMs = Date.now() - days * 24 * 60 * 60 * 1000;
+    return new Date(sinceMs).toISOString();
+  }
 
   // Fetch tweets from a specific account (username)
   async fetchTweetsFromAccount(username: string, maxResults: number = 25): Promise<SocialUpdate[]> {
@@ -17,6 +53,18 @@ class TwitterService {
       console.warn('[TwitterService] Twitter Bearer Token not configured');
       console.warn('[TwitterService] To enable Twitter, set EXPO_PUBLIC_TWITTER_BEARER_TOKEN in EAS secrets');
       return [];
+    }
+
+    if (this.isRateLimited()) {
+      const msLeft = (this.rateLimitedUntilEpochMs as number) - Date.now();
+      console.warn(`[TwitterService] Skipping request due to active rate limit. Retry in ~${Math.ceil(msLeft / 1000)}s`);
+      const cached = this.cacheGet(this.accountCache, username);
+      return cached || [];
+    }
+
+    const cached = this.cacheGet(this.accountCache, username);
+    if (cached) {
+      return cached;
     }
 
     try {
@@ -43,6 +91,7 @@ class TwitterService {
           'expansions': 'attachments.media_keys,author_id',
           'media.fields': 'url,preview_image_url,type',
           'max_results': maxResults,
+          'start_time': this.getStartTimeIso(2),
         },
         timeout: 10000,
       });
@@ -53,7 +102,7 @@ class TwitterService {
 
       console.log(`[TwitterService] Found ${tweets.length} tweets`);
 
-      return tweets.map((tweet: any) => {
+      const mapped = tweets.map((tweet: any) => {
         const author = users.find((u: any) => u.id === tweet.author_id);
         const tweetMedia = media.filter((m: any) => 
           tweet.attachments?.media_keys?.includes(m.media_key)
@@ -63,7 +112,7 @@ class TwitterService {
           id: tweet.id,
           source: 'twitter',
           title: this.extractTitle(tweet.text),
-          content: tweet.text,
+          content: this.formatTweetContent(tweet.text),
           timestamp: tweet.created_at,
           hasMedia: tweet.attachments?.media_keys?.length > 0,
           mediaUrl: tweetMedia[0]?.url || tweetMedia[0]?.preview_image_url,
@@ -76,12 +125,19 @@ class TwitterService {
           sourceUrl: `https://twitter.com/${username}/status/${tweet.id}`,
         };
       });
+
+      // cache for 60s to avoid repeated calls
+      this.cacheSet(this.accountCache, username, mapped, 60 * 1000);
+      return mapped;
     } catch (error: any) {
       console.error('[TwitterService] Error fetching tweets:', error?.message || error);
       if (error?.response?.status === 401 || error?.response?.status === 403) {
         console.error('[TwitterService] Twitter authentication failed - check your Bearer Token');
       } else if (error?.response?.status === 429) {
         console.error('[TwitterService] Twitter rate limit exceeded');
+        this.setRateLimitFromHeaders(error?.response?.headers);
+        const resetAt = this.rateLimitedUntilEpochMs ? new Date(this.rateLimitedUntilEpochMs).toISOString() : 'unknown';
+        console.warn(`[TwitterService] Will resume after: ${resetAt}`);
       }
       return [];
     }
@@ -92,6 +148,18 @@ class TwitterService {
     if (!TWITTER_BEARER_TOKEN || TWITTER_BEARER_TOKEN === 'your_twitter_bearer_token_here') {
       console.warn('[TwitterService] Twitter Bearer Token not configured');
       return [];
+    }
+
+    if (this.isRateLimited()) {
+      const msLeft = (this.rateLimitedUntilEpochMs as number) - Date.now();
+      console.warn(`[TwitterService] Skipping search due to active rate limit. Retry in ~${Math.ceil(msLeft / 1000)}s`);
+      const cached = this.cacheGet(this.searchCache, query);
+      return cached || [];
+    }
+
+    const cached = this.cacheGet(this.searchCache, query);
+    if (cached) {
+      return cached;
     }
 
     try {
@@ -108,6 +176,7 @@ class TwitterService {
           'expansions': 'attachments.media_keys,author_id',
           'media.fields': 'url,preview_image_url,type',
           max_results: maxResults,
+          'start_time': this.getStartTimeIso(2),
         },
         timeout: 10000,
       });
@@ -118,7 +187,7 @@ class TwitterService {
 
       console.log(`[TwitterService] Found ${tweets.length} tweets`);
 
-      return tweets.map((tweet: any) => {
+      const mapped = tweets.map((tweet: any) => {
         const author = users.find((u: any) => u.id === tweet.author_id);
         const tweetMedia = media.filter((m: any) => 
           tweet.attachments?.media_keys?.includes(m.media_key)
@@ -128,7 +197,7 @@ class TwitterService {
           id: tweet.id,
           source: 'twitter',
           title: this.extractTitle(tweet.text),
-          content: tweet.text,
+          content: this.formatTweetContent(tweet.text),
           timestamp: tweet.created_at,
           hasMedia: tweet.attachments?.media_keys?.length > 0,
           mediaUrl: tweetMedia[0]?.url || tweetMedia[0]?.preview_image_url,
@@ -141,23 +210,45 @@ class TwitterService {
           sourceUrl: tweet.id ? `https://twitter.com/i/status/${tweet.id}` : undefined,
         };
       });
+
+      this.cacheSet(this.searchCache, query, mapped, 60 * 1000);
+      return mapped;
     } catch (error: any) {
       console.error('[TwitterService] Error searching tweets:', error?.message || error);
+      if (error?.response?.status === 429) {
+        this.setRateLimitFromHeaders(error?.response?.headers);
+      }
       return [];
     }
   }
 
   // Extract title from tweet text
   private extractTitle(text: string): string {
-    // Remove URLs
-    let title = text.replace(/https?:\/\/[^\s]+/g, '');
-    
+    // Remove URLs, mentions, hashtags, collapse spaces
+    let title = text
+      .replace(/https?:\/\/[^\s]+/g, '')
+      .replace(/@[A-Za-z0-9_]+/g, '')
+      .replace(/#[^\s#]+/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+
     // Take first 100 characters
     if (title.length > 100) {
       title = title.substring(0, 100) + '...';
     }
     
     return title || 'Twitter Update';
+  }
+
+  // Convert tweet text into a news-like description
+  private formatTweetContent(text: string): string {
+    const cleaned = text
+      .replace(/https?:\/\/[^\s]+/g, '')
+      .replace(/@[A-Za-z0-9_]+/g, '')
+      .replace(/#[^\s#]+/g, '')
+      .replace(/\s{2,}/g, ' ')
+      .trim();
+    return cleaned ? (/\.$|!$|\?$/.test(cleaned) ? cleaned : cleaned + '.') : 'Update from Twitter.';
   }
 
   // Get media type
@@ -218,6 +309,7 @@ class TwitterService {
     // Twitter account usernames to fetch from
     const twitterAccounts = [
       'shaheryarhassan',  // Your city updates account
+      'IsbTraffic',       // Islamabad Traffic Police updates
       // Add more accounts here if needed
       // Example: 'IslamabadGov', 'Rawalpindi_Updates', 'TwinCityAlerts'
     ];
@@ -228,16 +320,25 @@ class TwitterService {
     }
 
     try {
-      const allTweets = await Promise.all(
-        twitterAccounts.map(account => this.fetchTweetsFromAccount(account, 25))
+      const perAccount = await Promise.all(
+        twitterAccounts.map(account => this.fetchTweetsFromAccount(account, 40))
       );
 
-      const flattenedTweets = allTweets.flat();
+      // Traffic-focused search for Twin Cities
+      const trafficQuery = '(traffic OR road OR accident OR closure OR jam OR diversion) (Islamabad OR Rawalpindi OR "twin cities") -is:retweet';
+      const searched = await this.searchTweets(trafficQuery, 40);
+
+      const flattenedTweets = [...perAccount.flat(), ...searched];
       
       console.log(`[TwitterService] Total tweets fetched: ${flattenedTweets.length}`);
-      
+      // De-duplicate by id
+      const uniqueById = new Map<string, SocialUpdate>();
+      for (const t of flattenedTweets) {
+        if (!uniqueById.has(t.id)) uniqueById.set(t.id, t);
+      }
+
       // Sort by timestamp (newest first)
-      return flattenedTweets.sort((a, b) => 
+      return Array.from(uniqueById.values()).sort((a, b) => 
         new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
     } catch (error) {

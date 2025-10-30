@@ -7,7 +7,8 @@ import {
   TouchableOpacity,
   RefreshControl,
   StatusBar,
-  ActivityIndicator
+  ActivityIndicator,
+  SectionList
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { 
@@ -44,6 +45,8 @@ export default function HomeScreen() {
   const [showCategories, setShowCategories] = useState(false);
   const [activeCategory, setActiveCategory] = useState('all');
   const [savedNewsIds, setSavedNewsIds] = useState<Set<string>>(new Set());
+  const [newsVisible, setNewsVisible] = useState(10);
+  const [tweetsVisible, setTweetsVisible] = useState(10);
   
   const isDarkMode = state.preferences.darkMode;
   const colors = getThemeColors(isDarkMode);
@@ -138,6 +141,9 @@ export default function HomeScreen() {
 
   const handleRefresh = async () => {
     await refreshUpdates();
+    // reset pagination on refresh
+    setNewsVisible(10);
+    setTweetsVisible(10);
   };
 
   const handleSearch = (query: string) => {
@@ -240,7 +246,7 @@ export default function HomeScreen() {
       
       {showFilters && (
         <View style={[styles.filters, isDarkMode && styles.filtersDark]}>
-          {['all', 'whatsapp', 'twitter', 'facebook'].map((filter) => (
+          {['all', 'news', 'twitter'].map((filter) => (
             <TouchableOpacity
               key={filter}
               style={[
@@ -318,6 +324,30 @@ export default function HomeScreen() {
     return null;
   };
 
+  // Split data per section and counts
+  const newsAll = state.filteredUpdates.filter((u: any) => u.source === 'news');
+  const tweetsAll = state.filteredUpdates.filter((u: any) => u.source === 'twitter');
+  const sections = [
+    { title: `News (${newsAll.length})`, key: 'news', total: newsAll.length, data: newsAll.slice(0, newsVisible) },
+    { title: `Tweets (${tweetsAll.length})`, key: 'tweets', total: tweetsAll.length, data: tweetsAll.slice(0, tweetsVisible) },
+  ].filter(section => section.data.length > 0 || section.total > 0);
+
+  const renderSectionFooter = ({ section }: any) => {
+    const isNews = section.key === 'news';
+    const visible = isNews ? newsVisible : tweetsVisible;
+    if (visible >= section.total) return null;
+    return (
+      <View style={{ paddingHorizontal: 16, paddingVertical: 8 }}>
+        <TouchableOpacity
+          style={[styles.filterButton, isDarkMode && styles.filterButtonDark]}
+          onPress={() => isNews ? setNewsVisible(visible + 10) : setTweetsVisible(visible + 10)}
+        >
+          <Text style={[styles.filterButtonText, isDarkMode && styles.filterButtonTextDark]}>Load more</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView style={[styles.container, isDarkMode && styles.containerDark]}>
       <StatusBar 
@@ -325,13 +355,26 @@ export default function HomeScreen() {
         backgroundColor={isDarkMode ? "#111827" : "#ffffff"} 
       />
       
-      <FlatList
-        data={state.filteredUpdates}
+      <SectionList
+        sections={sections}
         renderItem={renderUpdateCard}
         keyExtractor={(item) => item.id}
+        renderSectionHeader={({ section }) => (
+          <View style={{ paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6 }}>
+            <Text style={{
+              fontSize: 18,
+              fontWeight: '700',
+              color: isDarkMode ? '#f9fafb' : '#111827'
+            }}>
+              {section.title}
+            </Text>
+          </View>
+        )}
+        renderSectionFooter={renderSectionFooter}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmptyState}
         ListFooterComponent={renderFooter}
+        stickySectionHeadersEnabled={false}
         refreshControl={
           <RefreshControl
             refreshing={state.refreshing}

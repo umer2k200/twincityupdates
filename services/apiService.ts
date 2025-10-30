@@ -4,7 +4,7 @@ import { twitterService } from './twitterService';
 
 export interface SocialUpdate {
   id: string;
-  source: 'whatsapp' | 'twitter' | 'facebook';
+  source: 'whatsapp' | 'twitter' | 'facebook' | 'news';
   title: string;
   content: string;
   timestamp: string;
@@ -250,17 +250,21 @@ class ApiService {
       console.log('[ApiService] Fetching all updates from APIs...');
       
       // Try to fetch from all sources simultaneously
-      const [realNewsData, realTweets] = await Promise.all([
+      const [realNewsData, realTweets] = await Promise.allSettled([
         newsApiService.fetchAllNews(),
         twitterService.fetchAllTweets(),
       ]);
       
+      // Extract successful results
+      const newsData = realNewsData.status === 'fulfilled' ? realNewsData.value : [];
+      const tweetsData = realTweets.status === 'fulfilled' ? realTweets.value : [];
+      
       // Combine all real data
-      const allRealData = [...realNewsData, ...realTweets];
+      const allRealData = [...newsData, ...tweetsData];
       
       // If we have real data, use it
       if (allRealData.length > 0) {
-        console.log(`[ApiService] Successfully fetched ${allRealData.length} updates (${realNewsData.length} news + ${realTweets.length} tweets)`);
+        console.log(`[ApiService] Successfully fetched ${allRealData.length} updates (${newsData.length} news + ${tweetsData.length} tweets)`);
         return allRealData;
       }
       

@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useReducer, useEffect, ReactNode } from 'react';
 import { SocialUpdate, apiService } from '../services/apiService';
+import { notifyOnNewUpdates } from '../services/notificationService';
 import { storageService, UserPreferences } from '../services/storageService';
 
 interface AppState {
@@ -146,10 +147,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
       dispatch({ type: 'SET_LOADING', payload: true });
       
       console.log('AppContext: Fetching updates for Twin Cities...');
+      const previous = state.updates;
       const updates = await apiService.fetchAllUpdates();
       
       console.log(`AppContext: Loaded ${updates.length} updates for Islamabad/Rawalpindi`);
       dispatch({ type: 'SET_UPDATES', payload: updates });
+
+      // Notify for newly added critical updates
+      try {
+        await notifyOnNewUpdates(previous, updates);
+      } catch (e) {
+        console.warn('Notification dispatch failed:', e);
+      }
       
       // Cache updates if offline mode is enabled
       if (state.preferences.offlineMode) {
@@ -178,8 +187,15 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       dispatch({ type: 'SET_REFRESHING', payload: true });
       
+      const previous = state.updates;
       const updates = await apiService.fetchAllUpdates();
       dispatch({ type: 'SET_UPDATES', payload: updates });
+
+      try {
+        await notifyOnNewUpdates(previous, updates);
+      } catch (e) {
+        console.warn('Notification dispatch failed:', e);
+      }
       
       // Cache updates if offline mode is enabled
       if (state.preferences.offlineMode) {

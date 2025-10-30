@@ -6,9 +6,13 @@ import { AppProvider } from '../contexts/AppContext';
 import { AuthProvider } from '../contexts/AuthContext';
 import { LanguageProvider } from '../contexts/LanguageContext';
 import { NotificationProvider } from '../contexts/NotificationContext';
+import { initNotifications } from '../services/notificationService';
 
 export default function RootLayout() {
   useFrameworkReady();
+  useEffect(() => {
+    initNotifications();
+  }, []);
 
   return (
     <AuthProvider>
