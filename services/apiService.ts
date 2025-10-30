@@ -250,17 +250,17 @@ class ApiService {
       console.log('[ApiService] Fetching all updates from APIs...');
       
       // Try to fetch from all sources simultaneously
-      const [realNewsData, twitterUpdates] = await Promise.all([
+      const [realNewsData, realTweets] = await Promise.all([
         newsApiService.fetchAllNews(),
         twitterService.fetchAllTweets(),
       ]);
       
       // Combine all real data
-      const allRealData = [...realNewsData, ...twitterUpdates];
+      const allRealData = [...realNewsData, ...realTweets];
       
       // If we have real data, use it
       if (allRealData.length > 0) {
-        console.log(`[ApiService] Successfully fetched ${allRealData.length} updates (${realNewsData.length} news + ${twitterUpdates.length} tweets)`);
+        console.log(`[ApiService] Successfully fetched ${allRealData.length} updates (${realNewsData.length} news + ${realTweets.length} tweets)`);
         return allRealData;
       }
       
@@ -269,26 +269,28 @@ class ApiService {
                            process.env.EXPO_PUBLIC_NEWS_API_KEY !== 'your_newsapi_key_here';
       const hasGNewsKey = process.env.EXPO_PUBLIC_GNEWS_API_KEY && 
                          process.env.EXPO_PUBLIC_GNEWS_API_KEY !== 'your_gnews_api_key_here';
+      const hasTwitterKey = process.env.EXPO_PUBLIC_TWITTER_BEARER_TOKEN &&
+                           process.env.EXPO_PUBLIC_TWITTER_BEARER_TOKEN !== 'your_twitter_bearer_token_here';
       
-      if (hasNewsAPIKey || hasGNewsKey) {
+      if (hasNewsAPIKey || hasGNewsKey || hasTwitterKey) {
         // API keys are configured but returned no data - might be network issue or API problem
-        console.warn('[ApiService] API keys configured but no news fetched - possible network or API issue');
+        console.warn('[ApiService] API keys configured but no data fetched - possible network or API issue');
         console.warn('[ApiService] Returning empty array instead of mock data');
         return [];
       }
       
       // No API keys configured - only then use mock data as last resort
-      console.warn('[ApiService] No API keys configured and no real news data - using mock data');
-      console.warn('[ApiService] To get real news, configure EXPO_PUBLIC_NEWS_API_KEY and/or EXPO_PUBLIC_GNEWS_API_KEY');
+      console.warn('[ApiService] No API keys configured and no real data - using mock data');
+      console.warn('[ApiService] To get real data, configure API keys in EAS secrets');
       
       // Fallback to mock data only if no API keys are set
-      const [whatsappUpdates, twitterUpdates, facebookUpdates] = await Promise.all([
+      const [whatsappUpdates, mockTwitterUpdates, facebookUpdates] = await Promise.all([
         this.fetchWhatsAppUpdates(),
         this.fetchTwitterUpdates(),
         this.fetchFacebookUpdates(),
       ]);
 
-      const allUpdates = [...whatsappUpdates, ...twitterUpdates, ...facebookUpdates];
+      const allUpdates = [...whatsappUpdates, ...mockTwitterUpdates, ...facebookUpdates];
       
       // Sort by timestamp (newest first)
       return allUpdates.sort((a, b) => 
