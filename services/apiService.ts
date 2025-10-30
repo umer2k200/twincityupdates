@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { newsApiService } from './newsApiService';
+import { twitterService } from './twitterService';
 
 export interface SocialUpdate {
   id: string;
@@ -204,19 +205,17 @@ class ApiService {
   // Twitter API integration
   async fetchTwitterUpdates(): Promise<SocialUpdate[]> {
     try {
-      // In production, replace with actual Twitter API v2 call
-      // const response = await axios.get(`${this.baseUrl}/twitter/tweets`, {
-      //   headers: {
-      //     'Authorization': `Bearer ${TWITTER_BEARER_TOKEN}`,
-      //     'Content-Type': 'application/json',
-      //   },
-      //   params: {
-      //     'tweet.fields': 'created_at,public_metrics,attachments',
-      //     'user.fields': 'username,name',
-      //     'expansions': 'author_id,attachments.media_keys',
-      //   },
-      // });
+      // Try to fetch real tweets from Twitter API
+      const realTweets = await twitterService.fetchAllTweets();
       
+      // If we have real tweets, use them
+      if (realTweets.length > 0) {
+        console.log(`[ApiService] Successfully fetched ${realTweets.length} real tweets`);
+        return realTweets;
+      }
+      
+      // Fallback to mock data if no real tweets available
+      console.warn('[ApiService] No real Twitter data available - using mock data');
       return mockUpdates.filter(update => update.source === 'twitter');
     } catch (error) {
       console.error('Error fetching Twitter updates:', error);
@@ -250,13 +249,19 @@ class ApiService {
     try {
       console.log('[ApiService] Fetching all updates from APIs...');
       
-      // Always try to fetch from real APIs first
-      const realNewsData = await newsApiService.fetchAllNews();
+      // Try to fetch from all sources simultaneously
+      const [realNewsData, twitterUpdates] = await Promise.all([
+        newsApiService.fetchAllNews(),
+        twitterService.fetchAllTweets(),
+      ]);
+      
+      // Combine all real data
+      const allRealData = [...realNewsData, ...twitterUpdates];
       
       // If we have real data, use it
-      if (realNewsData.length > 0) {
-        console.log(`[ApiService] Successfully fetched ${realNewsData.length} real news articles`);
-        return realNewsData;
+      if (allRealData.length > 0) {
+        console.log(`[ApiService] Successfully fetched ${allRealData.length} updates (${realNewsData.length} news + ${twitterUpdates.length} tweets)`);
+        return allRealData;
       }
       
       // If no real data, check if API keys are configured
